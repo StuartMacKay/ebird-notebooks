@@ -1,0 +1,19 @@
+abstract:
+    eBird Notebooks is collection of Jupyter notebooks for analysing checklists
+    submitted to eBird and generating reports.
+authors:
+  - name: Stuart MacKay
+cff-version: 1.2.0
+date-released: 2024-12-01
+keywords:
+  - eBird
+  - checklists
+  - Jupyter
+  - Notebooks
+  - analysis
+  - reports
+license: MIT License
+message: If you use this software, please cite it using the metadata from this file.
+repository-code: "https://github.com/StuartMacKay/ebird-notebooks"
+title: eBird Notebooks
+version: 0.0.0
