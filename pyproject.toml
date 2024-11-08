@@ -1,0 +1,11 @@
+[project]
+name = "ebird-notebooks"
+version = "0.0.0"
+description = "Jupyter notebooks for analysing eBird checklists"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "jupyterlab>=4.2.5",
+    "notebook>=7.2.2",
+    "sqlalchemy>=2.0.36",
+]
