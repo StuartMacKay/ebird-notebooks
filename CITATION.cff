@@ -1,0 +1,20 @@
+abstract:
+    eBird Notebooks brings together Django and Jupyter Lab to create an easy to use
+    platform analyse data from eBird.
+authors:
+  - name: Stuart MacKay
+cff-version: 1.2.0
+date-released: 2024-12-01
+keywords:
+  - analysis
+  - eBird
+  - checklists
+  - Django
+  - Jupyter
+  - Notebooks
+  - reports
+license: MIT License
+message: If you use this software, please cite it using the metadata from this file.
+repository-code: "https://github.com/StuartMacKay/ebird-notebooks"
+title: eBird Notebooks
+version: 0.0.0
