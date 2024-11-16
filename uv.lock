@@ -270,10 +270,20 @@ wheels = [
 ]
 
 [[package]]
+name = "ebird-api"
+version = "3.0.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/0b/6c081a973f6d245aefe9b0e248b85301efbf51d0fb74ac8dca6f1cf2b68a/ebird_api-3.0.7.tar.gz", hash = "sha256:b39084d5afedeaee393bbd48a9db17ee245df62985f678172fcb890ebf752a84", size = 23745 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/b2/48dea13b25636333fa8dab9fd9d921189f07c94f73ad800cc3f56c0c6dfb/ebird_api-3.0.7-py3-none-any.whl", hash = "sha256:ae73449014b7af54d227e2d19469864aea0b397f33a2a6d79bf7eb0ed91c516c", size = 23829 },
+]
+
+[[package]]
 name = "ebird-notebooks"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "ebird-api" },
     { name = "jupyterlab" },
     { name = "notebook" },
     { name = "sqlalchemy" },
@@ -281,6 +291,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ebird-api", specifier = ">=3.0.7" },
     { name = "jupyterlab", specifier = ">=4.2.5" },
     { name = "notebook", specifier = ">=7.2.2" },
     { name = "sqlalchemy", specifier = ">=2.0.36" },

@@ -13,3 +13,7 @@ DATA_DIR = ROOT_DIR.joinpath("data")
 EBD_DATABASE_PATH = DATA_DIR.joinpath("ebd.sqlite3")
 # The URL used by the database engine.
 EBD_DATABASE_URL = f"sqlite+pysqlite:///{EBD_DATABASE_PATH}"
+# The full path to the sqlite3 database.
+API_DATABASE_PATH = DATA_DIR.joinpath("api.sqlite3")
+# The URL used by the database engine.
+API_DATABASE_URL = f"sqlite+pysqlite:///{API_DATABASE_PATH}"
