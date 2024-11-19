@@ -6,7 +6,6 @@ scheduler such as cron.
 
 """
 import os
-import sys
 
 from pathlib import Path
 
@@ -14,14 +13,10 @@ from dotenv import load_dotenv
 
 # Get the root directory of the project
 root_dir =Path(__file__).absolute().parent.parent
-# Get the directory where the python code lives
-src_dir = root_dir.joinpath("src")
-# Add it to PYTHONPATH so we can import the loader
-sys.path.insert(0, str(src_dir))
 
 # Now we can load the local python
-from ebird import settings
-from ebird.db import loaders
+from main import settings
+from main.db import loaders
 
 # Change to the root directory
 os.chdir(root_dir)
