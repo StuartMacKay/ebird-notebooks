@@ -20,3 +20,4 @@ __pycache__/
 # project artefacts
 *.sqlite3
 *.csv
+build/
