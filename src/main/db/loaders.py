@@ -310,45 +310,48 @@ class APILoader:
                 exotic_code="",
             ))
 
-    def load(self, region, back):
+    def load(self, regions, back):
         with Session(self.engine) as session:
             if session.query(Species.id).count() == 0:
                 sys.stdout.write("Loading eBird taxonomy\n")
                 self._load_taxonomy(session)
 
-            sys.stdout.write("Fetching checklists for %s\n" % region)
-            visits = get_visits(self.api_key, region, max_results=200)
-            sys.stdout.write("Fetching checklists for the past %d days\n" % back)
+            regions = [region.strip() for region in regions.split(",")]
 
-            added = updated = unchanged = 0
-            loaded = dt.datetime.now()
-            start = (dt.datetime.now() - dt.timedelta(days=back)).date()
+            for region in regions:
+                sys.stdout.write("Fetching checklists for %s\n" % region)
+                visits = get_visits(self.api_key, region, max_results=200)
+                sys.stdout.write("Fetching checklists for the past %d days\n" % back)
 
-            for visit in visits:
-                visit_date = dt.datetime.fromisoformat(visit["isoObsDate"]).date()
-                if visit_date <= start:
-                    continue
-                sys.stdout.write("Fetching checklist %s (%s)\n" % (
-                    visit["subId"], visit_date.strftime("%Y-%m-%d"))
-                )
-                checklist = get_checklist(self.api_key, visit["subId"])
-                checklist["loc"] = visit["loc"]
-                for observation in checklist.pop("obs"):
-                    last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
-                    try:
-                        observation = self._load_observation(session, last_edited, checklist, observation)
-                        if observation.created > loaded:
-                            added += 1
-                        elif observation.modified > loaded:
-                            updated += 1
-                        else:
-                            unchanged += 1
-                    except Exception as err:
-                        sys.stdout.write("Error: %s\n\n" % str(err))
-                        sys.stdout.write("Checklist: %s\n\n" % str(checklist))
-                        sys.stdout.write("Observation: %s\n" % str(observation))
+                added = updated = unchanged = 0
+                loaded = dt.datetime.now()
+                start = (dt.datetime.now() - dt.timedelta(days=back)).date()
 
-                session.commit()
+                for visit in visits:
+                    visit_date = dt.datetime.fromisoformat(visit["isoObsDate"]).date()
+                    if visit_date <= start:
+                        continue
+                    sys.stdout.write("Fetching checklist %s (%s)\n" % (
+                        visit["subId"], visit_date.strftime("%Y-%m-%d"))
+                    )
+                    checklist = get_checklist(self.api_key, visit["subId"])
+                    checklist["loc"] = visit["loc"]
+                    for observation in checklist.pop("obs"):
+                        last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
+                        try:
+                            observation = self._load_observation(session, last_edited, checklist, observation)
+                            if observation.created > loaded:
+                                added += 1
+                            elif observation.modified > loaded:
+                                updated += 1
+                            else:
+                                unchanged += 1
+                        except Exception as err:
+                            sys.stdout.write("Error: %s\n\n" % str(err))
+                            sys.stdout.write("Checklist: %s\n\n" % str(checklist))
+                            sys.stdout.write("Observation: %s\n" % str(observation))
+
+                    session.commit()
 
         total = added + updated + unchanged
 
