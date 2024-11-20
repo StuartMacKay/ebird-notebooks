@@ -310,21 +310,27 @@ class APILoader:
                 exotic_code="",
             ))
 
-    def load(self, region):
+    def load(self, region, back):
         with Session(self.engine) as session:
             if session.query(Species.id).count() == 0:
                 sys.stdout.write("Loading eBird taxonomy\n")
                 self._load_taxonomy(session)
 
-            sys.stdout.write("Fetching visits in %s\n" % region)
+            sys.stdout.write("Fetching checklists for %s\n" % region)
             visits = get_visits(self.api_key, region, max_results=200)
-            sys.stdout.write("Number of checklists to fetch: %d\n" % len(visits))
+            sys.stdout.write("Fetching checklists for the past %d days\n" % back)
 
             added = updated = unchanged = 0
             loaded = dt.datetime.now()
+            start = (dt.datetime.now() - dt.timedelta(days=back)).date()
 
             for visit in visits:
-                sys.stdout.write("Fetching checklist %s\n" % visit["subId"])
+                visit_date = dt.datetime.fromisoformat(visit["isoObsDate"]).date()
+                if visit_date <= start:
+                    continue
+                sys.stdout.write("Fetching checklist %s (%s)\n" % (
+                    visit["subId"], visit_date.strftime("%Y-%m-%d"))
+                )
                 checklist = get_checklist(self.api_key, visit["subId"])
                 checklist["loc"] = visit["loc"]
                 for observation in checklist.pop("obs"):
