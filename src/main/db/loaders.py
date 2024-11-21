@@ -311,52 +311,64 @@ class APILoader:
             ))
 
     def load(self, regions, back):
+        today = dt.date.today()
+        loaded = dt.datetime.now()
+        areas = [region.strip() for region in regions.split(",")]
+        dates = [today - dt.timedelta(days=offset) for offset in range(back)]
+        added = updated = unchanged = 0
+        visits = []
+
+        sys.stdout.write("Fetching visits...\n")
+        sys.stdout.write("For areas: %s\n" % ", ".join(areas))
+        sys.stdout.write("For the past %d days\n" % back)
+
         with Session(self.engine) as session:
             if session.query(Species.id).count() == 0:
                 sys.stdout.write("Loading eBird taxonomy\n")
                 self._load_taxonomy(session)
 
-            regions = [region.strip() for region in regions.split(",")]
-
-            for region in regions:
-                sys.stdout.write("Fetching checklists for %s\n" % region)
-                visits = get_visits(self.api_key, region, max_results=200)
-                sys.stdout.write("Fetching checklists for the past %d days\n" % back)
-
-                added = updated = unchanged = 0
-                loaded = dt.datetime.now()
-                start = (dt.datetime.now() - dt.timedelta(days=back)).date()
-
-                for visit in visits:
-                    visit_date = dt.datetime.fromisoformat(visit["isoObsDate"]).date()
-                    if visit_date <= start:
-                        continue
-                    sys.stdout.write("Fetching checklist %s (%s)\n" % (
-                        visit["subId"], visit_date.strftime("%Y-%m-%d"))
+            for date in dates:
+                sys.stdout.write("Date: %s\n" % date)
+                for area in areas:
+                    results = get_visits(self.api_key, area, date=date, max_results=200)
+                    visits.extend(results)
+                    sys.stdout.write("%s: %d checklists submitted\n"
+                        % (area, len(results))
                     )
-                    checklist = get_checklist(self.api_key, visit["subId"])
-                    checklist["loc"] = visit["loc"]
-                    for observation in checklist.pop("obs"):
-                        last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
-                        try:
-                            observation = self._load_observation(session, last_edited, checklist, observation)
-                            if observation.created > loaded:
-                                added += 1
-                            elif observation.modified > loaded:
-                                updated += 1
-                            else:
-                                unchanged += 1
-                        except Exception as err:
-                            sys.stdout.write("Error: %s\n\n" % str(err))
-                            sys.stdout.write("Checklist: %s\n\n" % str(checklist))
-                            sys.stdout.write("Observation: %s\n" % str(observation))
+                    sys.stdout.flush()
 
-                    session.commit()
+            sys.stdout.write("Total number of checklists: %d\n" % len(visits))
+            sys.stdout.write("Fetching checklists...\n")
+
+            for visit in visits:
+                identifier = visit["subId"]
+                location = visit["loc"]["name"]
+                area = visit["loc"]["subnational1Code"]
+                sys.stdout.write(f"{identifier}, {area}, {location}\n")
+                checklist = get_checklist(self.api_key, identifier)
+                checklist["loc"] = visit["loc"]
+                last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
+                for observation in checklist.pop("obs"):
+                    try:
+                        observation = self._load_observation(session, last_edited, checklist, observation)
+                        if observation.created > loaded:
+                            added += 1
+                        elif observation.modified > loaded:
+                            updated += 1
+                        else:
+                            unchanged += 1
+                    except Exception as err:
+                        sys.stdout.write("Error: %s\n\n" % str(err))
+                        sys.stdout.write("Checklist: %s\n\n" % str(checklist))
+                        sys.stdout.write("Observation: %s\n" % str(observation))
+
+                session.commit()
 
         total = added + updated + unchanged
 
-        sys.stdout.write("Successfully loaded API records\n")
-        sys.stdout.write("%d records added\n" % added)
-        sys.stdout.write("%d records updated\n" % updated)
-        sys.stdout.write("%d records unchanged\n" % unchanged)
-        sys.stdout.write("%d records in total\n" % total)
+        sys.stdout.write("Success\n")
+        sys.stdout.write("%d checklists fetched\n" % len(visits))
+        sys.stdout.write("%d observations added\n" % added)
+        sys.stdout.write("%d observations updated\n" % updated)
+        sys.stdout.write("%d observations unchanged\n" % unchanged)
+        sys.stdout.write("%d observations in total\n" % total)
