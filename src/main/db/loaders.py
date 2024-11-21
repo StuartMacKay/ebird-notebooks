@@ -291,24 +291,26 @@ class APILoader:
         }
         return self._create_or_update(session, Observation, identifier, last_edited, defaults)
 
-    def _load_taxonomy(self, session):
-        timestamp = dt.datetime.now()
-        for row in get_taxonomy(self.api_key):
-            session.add(Species(
-                created=timestamp,
-                modified=timestamp,
-                edited=timestamp,
-                identifier="",
-                code=row["speciesCode"],
-                category=row["category"],
-                common_name = row["comName"],
-                scientific_name = row["sciName"],
-                local_name="",
-                subspecies_common_name="",
-                subspecies_scientific_name="",
-                subspecies_local_name="",
-                exotic_code="",
-            ))
+    def load_taxonomy(self):
+        with Session(self.engine) as session:
+            timestamp = dt.datetime.now()
+            for row in get_taxonomy(self.api_key):
+                session.add(Species(
+                    created=timestamp,
+                    modified=timestamp,
+                    edited=timestamp,
+                    identifier="",
+                    code=row["speciesCode"],
+                    category=row["category"],
+                    common_name = row["comName"],
+                    scientific_name = row["sciName"],
+                    local_name="",
+                    subspecies_common_name="",
+                    subspecies_scientific_name="",
+                    subspecies_local_name="",
+                    exotic_code="",
+                ))
+            session.submit()
 
     def load(self, regions, back):
         today = dt.date.today()
@@ -323,10 +325,6 @@ class APILoader:
         sys.stdout.write("For the past %d days\n" % back)
 
         with Session(self.engine) as session:
-            if session.query(Species.id).count() == 0:
-                sys.stdout.write("Loading eBird taxonomy\n")
-                self._load_taxonomy(session)
-
             for date in dates:
                 sys.stdout.write("Date: %s\n" % date)
                 for area in areas:
