@@ -1,6 +1,7 @@
 """
 Settings for the notebooks.
 """
+
 from pathlib import Path
 
 # The root directory of the project.

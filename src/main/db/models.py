@@ -14,13 +14,13 @@ called John Smith, who are submitting checklists. The "nature" of the
 sources are different. The eBird Basic Dataset is used for analysis,
 whereas the eBird API is more appropriate for getting up to date news
 and information.
-
 """
+
 import datetime as dt
 import decimal
 from typing import List, Optional
 
-from sqlalchemy import Date, ForeignKey, Numeric, Text, Time, TIMESTAMP
+from sqlalchemy import Date, ForeignKey, Numeric, Text, Time
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -187,9 +187,13 @@ class Checklist(Base):
     # The number of minutes spent counting.
     duration: Mapped[Optional[int]]
     # The distance, in metres, covered while travelling.
-    distance: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(precision=9, scale=3))
+    distance: Mapped[Optional[decimal.Decimal]] = mapped_column(
+        Numeric(precision=9, scale=3)
+    )
     # The area covered, in hectares.
-    area: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric(precision=9, scale=3))
+    area: Mapped[Optional[decimal.Decimal]] = mapped_column(
+        Numeric(precision=9, scale=3)
+    )
     # All species seen are reported.
     complete: Mapped[bool]
     # Any comments about the checklist.
@@ -201,6 +205,7 @@ class Checklist(Base):
     observations: Mapped[List["Observation"]] = relationship(
         back_populates="checklist", cascade="all, delete-orphan"
     )
+
 
 class Observation(Base):
     __tablename__ = "observation"

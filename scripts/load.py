@@ -5,6 +5,7 @@ A script for loading observations from the eBird API using a
 scheduler such as cron.
 
 """
+
 import os
 
 from dotenv import load_dotenv

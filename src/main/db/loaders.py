@@ -5,15 +5,14 @@ import os
 import re
 import sys
 
+from ebird.api import get_checklist, get_taxonomy, get_visits
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
-from ebird.api import get_visits, get_checklist, get_taxonomy
-
 from .models import Checklist, Location, Observation, Observer, Species
 
-class EBDLoader:
 
+class EBDLoader:
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
 
@@ -32,7 +31,7 @@ class EBDLoader:
 
     @staticmethod
     def _create_or_update(session, model, identifier, last_edited, defaults):
-        stmt = select(model).where(model.identifier==identifier)
+        stmt = select(model).where(model.identifier == identifier)
         if row := session.execute(stmt).first():
             obj = row[0]
             if last_edited > obj.edited:
@@ -43,17 +42,23 @@ class EBDLoader:
                 session.add(obj)
         else:
             timestamp = dt.datetime.now()
-            obj = model(created=timestamp, modified=timestamp, edited=last_edited, identifier=identifier, **defaults)
+            obj = model(
+                created=timestamp,
+                modified=timestamp,
+                edited=last_edited,
+                identifier=identifier,
+                **defaults,
+            )
             session.add(obj)
 
         return obj
 
     def _load_observer(self, session, last_edited, row):
         identifier = row["OBSERVER ID"]
-        defaults = {
-            "name": ""
-        }
-        return self._create_or_update(session, Observer, identifier, last_edited, defaults)
+        defaults = {"name": ""}
+        return self._create_or_update(
+            session, Observer, identifier, last_edited, defaults
+        )
 
     def _load_checklist(self, session, last_edited, row):
         identifier = row["SAMPLING EVENT IDENTIFIER"]
@@ -63,7 +68,9 @@ class EBDLoader:
             "group": row["GROUP IDENTIFIER"],
             "observer_count": row["NUMBER OBSERVERS"],
             "date": dt.datetime.strptime(row["OBSERVATION DATE"], "%Y-%m-%d").date(),
-            "time": dt.datetime.strptime(row["TIME OBSERVATIONS STARTED"], "%H:%M:%S").time(),
+            "time": dt.datetime.strptime(
+                row["TIME OBSERVATIONS STARTED"], "%H:%M:%S"
+            ).time(),
             "protocol": row["PROTOCOL TYPE"],
             "protocol_code": row["PROTOCOL CODE"],
             "project_code": row["PROJECT CODE"],
@@ -74,7 +81,9 @@ class EBDLoader:
             "comments": row["TRIP COMMENTS"],
             "url": "",
         }
-        return self._create_or_update(session, Checklist, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Checklist, identifier, last_edited, defaults
+        )
 
     def _load_location(self, session, last_edited, row):
         identifier = row["LOCALITY ID"]
@@ -95,7 +104,9 @@ class EBDLoader:
             "atlas_block": row["ATLAS BLOCK"],
             "url": "",
         }
-        return self._create_or_update(session, Location, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Location, identifier, last_edited, defaults
+        )
 
     def _load_species(self, session, last_edited, row):
         identifier = row["TAXON CONCEPT ID"]
@@ -111,7 +122,9 @@ class EBDLoader:
             "subspecies_local_name": "",
             "exotic_code": row["EXOTIC CODE"],
         }
-        return self._create_or_update(session, Species, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Species, identifier, last_edited, defaults
+        )
 
     def _load_observation(self, session, last_edited, row):
         identifier = row["GLOBAL UNIQUE IDENTIFIER"]
@@ -129,7 +142,9 @@ class EBDLoader:
             "reason": row["REASON"],
             "comments": row["SPECIES COMMENTS"],
         }
-        return self._create_or_update(session, Observation, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Observation, identifier, last_edited, defaults
+        )
 
     def load(self, path):
         if not os.path.exists(path):
@@ -165,7 +180,6 @@ class EBDLoader:
 
 
 class APILoader:
-
     def __init__(self, api_key, db_url):
         self.api_key = api_key
         self.engine = create_engine(db_url)
@@ -194,7 +208,7 @@ class APILoader:
 
     @staticmethod
     def _create_or_update(session, model, identifier, last_edited, defaults):
-        stmt = select(model).where(model.identifier==identifier)
+        stmt = select(model).where(model.identifier == identifier)
         if row := session.execute(stmt).first():
             obj = row[0]
             if last_edited > obj.edited:
@@ -205,7 +219,13 @@ class APILoader:
                 session.add(obj)
         else:
             timestamp = dt.datetime.now()
-            obj = model(created=timestamp, modified=timestamp, edited=last_edited, identifier=identifier, **defaults)
+            obj = model(
+                created=timestamp,
+                modified=timestamp,
+                edited=last_edited,
+                identifier=identifier,
+                **defaults,
+            )
             session.add(obj)
         return obj
 
@@ -217,7 +237,9 @@ class APILoader:
         defaults = {
             "name": "",
         }
-        return self._create_or_update(session, Observer, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Observer, identifier, last_edited, defaults
+        )
 
     def _load_checklist(self, session, last_edited, checklist):
         identifier = checklist["subId"]
@@ -231,7 +253,9 @@ class APILoader:
         defaults = {
             "location": self._load_location(session, last_edited, checklist["loc"]),
             "observer": self._load_observer(session, last_edited, checklist),
-            "observer_count": self._get_integer_value(checklist.get("numObservers", None)),
+            "observer_count": self._get_integer_value(
+                checklist.get("numObservers", None)
+            ),
             "group": "",
             "species_count": checklist["numSpecies"],
             "date": dt.datetime.strptime(date, "%Y-%m-%d").date(),
@@ -246,7 +270,9 @@ class APILoader:
             "comments": "",
             "url": "",
         }
-        return self._create_or_update(session, Checklist, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Checklist, identifier, last_edited, defaults
+        )
 
     def _load_location(self, session, last_edited, row):
         identifier = row["locId"]
@@ -267,7 +293,9 @@ class APILoader:
             "longitude": self._get_decimal_value(row["longitude"]),
             "url": "",
         }
-        return self._create_or_update(session, Location, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Location, identifier, last_edited, defaults
+        )
 
     def _load_observation(self, session, last_edited, checklist, observation):
         identifier = self._get_observation_global_identifier(observation)
@@ -289,27 +317,31 @@ class APILoader:
             "reason": "",
             "comments": "",
         }
-        return self._create_or_update(session, Observation, identifier, last_edited, defaults)
+        return self._create_or_update(
+            session, Observation, identifier, last_edited, defaults
+        )
 
     def load_taxonomy(self):
         with Session(self.engine) as session:
             timestamp = dt.datetime.now()
             for row in get_taxonomy(self.api_key):
-                session.add(Species(
-                    created=timestamp,
-                    modified=timestamp,
-                    edited=timestamp,
-                    identifier="",
-                    code=row["speciesCode"],
-                    category=row["category"],
-                    common_name = row["comName"],
-                    scientific_name = row["sciName"],
-                    local_name="",
-                    subspecies_common_name="",
-                    subspecies_scientific_name="",
-                    subspecies_local_name="",
-                    exotic_code="",
-                ))
+                session.add(
+                    Species(
+                        created=timestamp,
+                        modified=timestamp,
+                        edited=timestamp,
+                        identifier="",
+                        code=row["speciesCode"],
+                        category=row["category"],
+                        common_name=row["comName"],
+                        scientific_name=row["sciName"],
+                        local_name="",
+                        subspecies_common_name="",
+                        subspecies_scientific_name="",
+                        subspecies_local_name="",
+                        exotic_code="",
+                    )
+                )
             session.submit()
 
     def load(self, regions, back):
@@ -330,8 +362,8 @@ class APILoader:
                 for area in areas:
                     results = get_visits(self.api_key, area, date=date, max_results=200)
                     visits.extend(results)
-                    sys.stdout.write("%s: %d checklists submitted\n"
-                        % (area, len(results))
+                    sys.stdout.write(
+                        "%s: %d checklists submitted\n" % (area, len(results))
                     )
                     sys.stdout.flush()
 
@@ -348,7 +380,9 @@ class APILoader:
                 last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
                 for observation in checklist.pop("obs"):
                     try:
-                        observation = self._load_observation(session, last_edited, checklist, observation)
+                        observation = self._load_observation(
+                            session, last_edited, checklist, observation
+                        )
                         if observation.created > loaded:
                             added += 1
                         elif observation.modified > loaded:
