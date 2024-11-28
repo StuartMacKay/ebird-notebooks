@@ -131,10 +131,16 @@ class BasicDatasetLoader:
 
     def _load_observation(self, session, last_edited, row):
         identifier = row["GLOBAL UNIQUE IDENTIFIER"]
+        if re.match(r"\d+", row["OBSERVATION COUNT"]):
+            count = self._get_integer_value(row["howManyStr"])
+            if count == 0:
+                count = None
+        else:
+            count = None
         defaults = {
             "checklist": self._load_checklist(session, last_edited, row),
             "species": self._load_species(session, last_edited, row),
-            "count": self._get_integer_value(row["OBSERVATION COUNT"]),
+            "count": count,
             "breeding_code": row["BREEDING CODE"],
             "breeding_category": row["BREEDING CATEGORY"],
             "behavior_code": row["BEHAVIOR CODE"],
@@ -310,6 +316,8 @@ class APILoader:
         identifier = self._get_observation_global_identifier(observation)
         if re.match(r"\d+", observation["howManyStr"]):
             count = self._get_integer_value(observation["howManyStr"])
+            if count == 0:
+                count = None
         else:
             count = None
         defaults = {
@@ -379,11 +387,10 @@ class APILoader:
                         )
                         sys.stdout.flush()
                     except (URLError, HTTPError) as err:
-                        formatted_date = date.strftime("%Y-%m-%d")
                         sys.stdout.write(
-                            "Error: Could not fetch visits for %s\n" % formatted_date
+                            "Error: Could not fetch visits for %s\n" % area
                         )
-                        sys.stdout.write(str(err))
+                        sys.stdout.write("%s\n" % str(err))
                         sys.stdout.flush()
 
             sys.stdout.write("Total number of checklists: %d\n" % len(visits))
@@ -419,7 +426,7 @@ class APILoader:
                     sys.stdout.write(
                         "Error: Could not fetch checklist %s\n" % identifier
                     )
-                    sys.stdout.write(str(err))
+                    sys.stdout.write("%s\n" % str(err))
                     sys.stdout.flush()
 
         total = added + updated + unchanged
@@ -556,10 +563,12 @@ class MyDataLoader:
         return self._create_or_update(session, Species, "order", identifier, defaults)
 
     def _load_observation(self, session, row):
-        if row["Count"].lower() == "x":
-            count = None
-        else:
+        if re.match(r"\d+", row["Count"]):
             count = self._get_integer_value(row["Count"])
+            if count == 0:
+                count = None
+        else:
+            count = None
         defaults = {
             "identifier": "",
             "checklist": self._load_checklist(session, row),
