@@ -156,29 +156,29 @@ class EBDLoader:
 
         with Session(self.engine) as session:
             with open(path) as csvfile:
-                added = updated = unchanged = 0
-                loaded = dt.datetime.now()
+                added = updated = unchanged = loaded = 0
+                date_loaded = dt.datetime.now()
                 reader = csv.DictReader(csvfile, delimiter="\t")
                 for row in reader:
                     last_edited = dt.datetime.fromisoformat(row["LAST EDITED DATE"])
                     observation = self._load_observation(session, last_edited, row)
-                    if observation.created > loaded:
+                    if observation.created > date_loaded:
                         added += 1
-                    elif observation.modified > loaded:
+                    elif observation.modified > date_loaded:
                         updated += 1
                     else:
                         unchanged += 1
+                    loaded += 1
                     session.commit()
-                    sys.stdout.write(".")
-                    sys.stdout.flush()
+                    if loaded % 10 == 0:
+                        sys.stdout.write("Records loaded: %d\r" % loaded)
+                        sys.stdout.flush()
 
-        total = added + updated + unchanged
-
-        sys.stdout.write("\nSuccessfully loaded eBird Basic Dataset\n")
+        sys.stdout.write("Records loaded: %d\n" % loaded)
         sys.stdout.write("%d records added\n" % added)
         sys.stdout.write("%d records updated\n" % updated)
         sys.stdout.write("%d records unchanged\n" % unchanged)
-        sys.stdout.write("%d records in total\n" % total)
+        sys.stdout.write("Loading completed successfully\n")
 
 
 class APILoader:
