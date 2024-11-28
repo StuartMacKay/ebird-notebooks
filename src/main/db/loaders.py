@@ -4,6 +4,7 @@ import decimal
 import os
 import re
 import sys
+from urllib.error import HTTPError, URLError
 
 from ebird.api import get_checklist, get_taxonomy, get_visits
 from sqlalchemy import create_engine, select
@@ -368,41 +369,58 @@ class APILoader:
             for date in dates:
                 sys.stdout.write("Date: %s\n" % date)
                 for area in areas:
-                    results = get_visits(self.api_key, area, date=date, max_results=200)
-                    visits.extend(results)
-                    sys.stdout.write(
-                        "%s: %d checklists submitted\n" % (area, len(results))
-                    )
-                    sys.stdout.flush()
+                    try:
+                        results = get_visits(
+                            self.api_key, area, date=date, max_results=200
+                        )
+                        visits.extend(results)
+                        sys.stdout.write(
+                            "%s: %d checklists submitted\n" % (area, len(results))
+                        )
+                        sys.stdout.flush()
+                    except (URLError, HTTPError) as err:
+                        formatted_date = date.strftime("%Y-%m-%d")
+                        sys.stdout.write(
+                            "Error: Could not fetch visits for %s\n" % formatted_date
+                        )
+                        sys.stdout.write(str(err))
+                        sys.stdout.flush()
 
             sys.stdout.write("Total number of checklists: %d\n" % len(visits))
             sys.stdout.write("Fetching checklists...\n")
 
             for visit in visits:
-                identifier = visit["subId"]
-                location = visit["loc"]["name"]
-                area = visit["loc"]["subnational1Code"]
-                sys.stdout.write(f"{identifier}, {area}, {location}\n")
-                checklist = get_checklist(self.api_key, identifier)
-                checklist["loc"] = visit["loc"]
-                last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
-                for observation in checklist.pop("obs"):
-                    try:
-                        observation = self._load_observation(
-                            session, last_edited, checklist, observation
-                        )
-                        if observation.created > loaded:
-                            added += 1
-                        elif observation.modified > loaded:
-                            updated += 1
-                        else:
-                            unchanged += 1
-                    except Exception as err:
-                        sys.stdout.write("Error: %s\n\n" % str(err))
-                        sys.stdout.write("Checklist: %s\n\n" % str(checklist))
-                        sys.stdout.write("Observation: %s\n" % str(observation))
+                try:
+                    identifier = visit["subId"]
+                    location = visit["loc"]["name"]
+                    area = visit["loc"]["subnational1Code"]
+                    sys.stdout.write(f"{identifier}, {area}, {location}\n")
+                    checklist = get_checklist(self.api_key, identifier)
+                    checklist["loc"] = visit["loc"]
+                    last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
+                    for observation in checklist.pop("obs"):
+                        try:
+                            observation = self._load_observation(
+                                session, last_edited, checklist, observation
+                            )
+                            if observation.created > loaded:
+                                added += 1
+                            elif observation.modified > loaded:
+                                updated += 1
+                            else:
+                                unchanged += 1
+                        except Exception as err:
+                            sys.stdout.write("Error: %s\n\n" % str(err))
+                            sys.stdout.write("Checklist: %s\n\n" % str(checklist))
+                            sys.stdout.write("Observation: %s\n" % str(observation))
 
-                session.commit()
+                    session.commit()
+                except (URLError, HTTPError) as err:
+                    sys.stdout.write(
+                        "Error: Could not fetch checklist %s\n" % identifier
+                    )
+                    sys.stdout.write(str(err))
+                    sys.stdout.flush()
 
         total = added + updated + unchanged
 
