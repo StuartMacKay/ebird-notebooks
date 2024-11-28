@@ -62,15 +62,17 @@ class EBDLoader:
 
     def _load_checklist(self, session, last_edited, row):
         identifier = row["SAMPLING EVENT IDENTIFIER"]
+        if value := row["TIME OBSERVATIONS STARTED"]:
+            time = dt.datetime.strptime(value, "%H:%M:%S").time()
+        else:
+            time = None
         defaults = {
             "location": self._load_location(session, last_edited, row),
             "observer": self._load_observer(session, last_edited, row),
             "group": row["GROUP IDENTIFIER"],
             "observer_count": row["NUMBER OBSERVERS"],
             "date": dt.datetime.strptime(row["OBSERVATION DATE"], "%Y-%m-%d").date(),
-            "time": dt.datetime.strptime(
-                row["TIME OBSERVATIONS STARTED"], "%H:%M:%S"
-            ).time(),
+            "time": time,
             "protocol": row["PROTOCOL TYPE"],
             "protocol_code": row["PROTOCOL CODE"],
             "project_code": row["PROJECT CODE"],
@@ -243,7 +245,13 @@ class APILoader:
 
     def _load_checklist(self, session, last_edited, checklist):
         identifier = checklist["subId"]
-        date, time = checklist["obsDt"].split(" ", 1)
+        date_str = checklist["obsDt"].split(" ", 1)[0]
+        date = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+        if checklist["obsTimeValid"]:
+            time_str = checklist["obsDt"].split(" ", 1)[1]
+            time = dt.datetime.strptime(time_str, "%H:%M").time()
+        else:
+            time = None
         if "durationHrs" in checklist:
             duration = checklist["durationHrs"] * 60.0
         else:
@@ -258,8 +266,8 @@ class APILoader:
             ),
             "group": "",
             "species_count": checklist["numSpecies"],
-            "date": dt.datetime.strptime(date, "%Y-%m-%d").date(),
-            "time": dt.datetime.strptime(time, "%H:%M").time(),
+            "date": date,
+            "time": time,
             "protocol": "",
             "protocol_code": checklist["protocolId"],
             "project_code": checklist["projId"],

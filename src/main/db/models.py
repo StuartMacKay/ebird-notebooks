@@ -177,7 +177,7 @@ class Checklist(Base):
     # The date the checklist was made.
     date: Mapped[dt.date] = mapped_column(Date)
     # The time the checklist was started.
-    time: Mapped[dt.time] = mapped_column(Time)
+    time: Mapped[Optional[dt.time]] = mapped_column(Time)
     # The protocol followed, e.g. travelling, stationary, etc.
     protocol: Mapped[str]
     # The code used to identify the protocol.
