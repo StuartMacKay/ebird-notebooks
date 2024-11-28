@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from .models import Checklist, Location, Observation, Observer, Species
 
 
-class EBDLoader:
+class BasicDatasetLoader:
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
 
