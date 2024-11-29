@@ -6,19 +6,16 @@ scheduler such as cron.
 
 """
 
-import os
-
-from dotenv import load_dotenv
-
 from main import settings
 from main.db import loaders
 
-load_dotenv(dotenv_path=settings.DOTENV_FILE)
+db_dir = settings.DATABASE_DIR
+db_name = "api_checklists"
+db_url = f"sqlite+pysqlite:///{db_dir}/{db_name}.sqlite3"
 
-api_key = os.getenv("EBIRD_API_KEY")
-regions = os.getenv("EBIRD_API_REGIONS")
-back = int(os.getenv("EBIRD_API_PAST_DAYS"))
-db_url = settings.API_DATABASE_URL
+api_key = settings.API_KEY
+regions = settings.API_REGIONS
+back = settings.API_PAST_DAYS
 
 loader = loaders.APILoader(api_key, db_url)
 loader.load(regions, back)
