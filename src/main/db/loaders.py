@@ -359,7 +359,7 @@ class APILoader:
                         exotic_code="",
                     )
                 )
-            session.submit()
+            session.commit()
 
     def load(self, regions, back):
         today = dt.date.today()
