@@ -140,6 +140,7 @@ class BasicDatasetLoader:
         defaults = {
             "checklist": self._load_checklist(session, last_edited, row),
             "species": self._load_species(session, last_edited, row),
+            "observer": self._load_observer(session, last_edited, row),
             "count": count,
             "breeding_code": row["BREEDING CODE"],
             "breeding_category": row["BREEDING CATEGORY"],
@@ -323,6 +324,7 @@ class APILoader:
         defaults = {
             "checklist": self._load_checklist(session, last_edited, checklist),
             "species": self._get_species(session, observation),
+            "observer": self._load_observer(session, last_edited, checklist),
             "count": count,
             "breeding_code": "",
             "breeding_category": "",
@@ -573,6 +575,7 @@ class MyDataLoader:
             "identifier": "",
             "checklist": self._load_checklist(session, row),
             "species": self._load_species(session, row),
+            "observer": self._load_observer(session, row),
             "count": count,
             "breeding_code": row["Breeding Code"] or "",
             "breeding_category": "",

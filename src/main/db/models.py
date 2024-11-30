@@ -147,6 +147,10 @@ class Observer(Base):
     checklists: Mapped[List["Checklist"]] = relationship(
         back_populates="observer", cascade="all, delete-orphan"
     )
+    # The reverse relation to the Observations for this Observer.
+    observations: Mapped[List["Observation"]] = relationship(
+        back_populates="observer", cascade="all, delete-orphan"
+    )
 
 
 class Checklist(Base):
@@ -226,6 +230,9 @@ class Observation(Base):
     # The identified species.
     species_id: Mapped[int] = mapped_column(ForeignKey("species.id"))
     species: Mapped["Species"] = relationship(back_populates="observations")
+    # The person who submitted the checklist
+    observer_id: Mapped[int] = mapped_column(ForeignKey("observer.id"))
+    observer: Mapped["Observer"] = relationship(back_populates="observations")
     # The number of birds seen.
     count: Mapped[Optional[int]]
     # eBird code identifying the breeding status
