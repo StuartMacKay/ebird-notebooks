@@ -221,10 +221,10 @@ class Observation(Base):
     # A global unique identifier for the observation.
     identifier: Mapped[str]
     # The checklist this observation belongs to.
-    checklist_id: Mapped[Optional[int]] = mapped_column(ForeignKey("checklist.id"))
+    checklist_id: Mapped[int] = mapped_column(ForeignKey("checklist.id"))
     checklist: Mapped["Checklist"] = relationship(back_populates="observations")
     # The identified species.
-    species_id: Mapped[Optional[int]] = mapped_column(ForeignKey("species.id"))
+    species_id: Mapped[int] = mapped_column(ForeignKey("species.id"))
     species: Mapped["Species"] = relationship(back_populates="observations")
     # The number of birds seen.
     count: Mapped[Optional[int]]
