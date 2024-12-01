@@ -1,3 +1,7 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 61.0"]
+
 [project]
 name = "ebird-notebooks"
 version = "0.0.0"
@@ -12,6 +16,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "sqlalchemy>=2.0.36",
 ]
+
 [tool.uv]
 dev-dependencies = [
     "bump-my-version>=0.28.1",

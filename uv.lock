@@ -361,7 +361,7 @@ wheels = [
 [[package]]
 name = "ebird-notebooks"
 version = "0.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "ebird-api" },
     { name = "jupyterlab" },
