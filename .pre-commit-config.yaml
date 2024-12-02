@@ -19,6 +19,11 @@ repos:
     # Run the formatter.
     - id: ruff-format
       types_or: [ python, pyi ]
+- repo: https://github.com/astral-sh/uv-pre-commit
+  # uv version.
+  rev: 0.5.5
+  hooks:
+    - id: uv-export
 - repo: https://github.com/pycqa/isort
   rev: 5.12.0
   hooks:
