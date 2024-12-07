@@ -44,8 +44,6 @@ class Species(Base):
     created: Mapped[dt.datetime]
     # The date and time the database record was modified.
     modified: Mapped[dt.datetime]
-    # The date and time the eBird record was last edited.
-    edited: Mapped[Optional[dt.datetime]]
     # The taxonomic concept identifier from Avibase.
     identifier: Mapped[str]
     # The species code, e.g. ostric2, used in the eBird API.
@@ -84,8 +82,6 @@ class Location(Base):
     created: Mapped[dt.datetime]
     # The date and time the database record was modified.
     modified: Mapped[dt.datetime]
-    # The date and time the eBird record was last edited.
-    edited: Mapped[Optional[dt.datetime]]
     # The unique identifier for the location.
     identifier: Mapped[str]
     # The location type, e.g. personal, hotspot, town, etc.
@@ -140,8 +136,6 @@ class Observer(Base):
     created: Mapped[dt.datetime]
     # The date and time the database record was modified.
     modified: Mapped[dt.datetime]
-    # The date and time the eBird record was last edited.
-    edited: Mapped[Optional[dt.datetime]]
     # The code for the person who submitted the checklist
     identifier: Mapped[str]
     # The name of the observer
@@ -166,7 +160,7 @@ class Checklist(Base):
     created: Mapped[dt.datetime]
     # The date and time the database record was modified.
     modified: Mapped[dt.datetime]
-    # The date and time the eBird record was last edited.
+    # The date and time the eBird checklist was last edited.
     edited: Mapped[Optional[dt.datetime]]
     # The unique identifier for the checklist
     identifier: Mapped[str]
@@ -224,7 +218,7 @@ class Observation(Base):
     created: Mapped[dt.datetime]
     # The date and time the database record was modified.
     modified: Mapped[dt.datetime]
-    # The date and time the eBird record was last edited.
+    # The date and time the eBird observation was last edited.
     edited: Mapped[Optional[dt.datetime]]
     # A global unique identifier for the observation.
     identifier: Mapped[str]
