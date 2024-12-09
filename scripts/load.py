@@ -8,8 +8,7 @@ scheduler such as cron.
 
 import datetime as dt
 
-from main import settings
-from main.db import loaders
+from ebird.notebooks import loaders, settings
 
 db_dir = settings.DATABASE_DIR
 db_name = "api_checklists"

@@ -13,6 +13,6 @@ setup(
     name="ebird-notebooks",
     version="0.0.0",
     description="Jupyter notebooks for analysing eBird checklists",
-    packages=["main"],
+    packages=["ebird.notebooks"],
     package_dir={"": "src"},
 )

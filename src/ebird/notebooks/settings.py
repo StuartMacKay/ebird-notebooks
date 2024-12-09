@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # The root directory of the project.
-ROOT_DIR = Path(__file__).parent.parent.parent.absolute()
+ROOT_DIR = Path(__file__).parent.parent.parent.parent.absolute()
 # The location of the .env dile
 DOTENV_FILE = ROOT_DIR.joinpath(".env")
 # The directory for data
