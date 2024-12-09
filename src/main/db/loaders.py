@@ -444,8 +444,8 @@ class APILoader:
         else:
             duration = None
 
-        distance = checklist_data.get("distKm", None)
-        area = checklist_data.get("areaHa", None)
+        distance = checklist_data.get("distKm")
+        area = checklist_data.get("areaHa")
 
         values = {
             "modified": timestamp,
@@ -453,9 +453,7 @@ class APILoader:
             "edited": edited,
             "location": self._get_location(session, location_data),
             "observer": self._get_observer(session, checklist_data),
-            "observer_count": self._integer_value(
-                checklist_data.get("numObservers", None)
-            ),
+            "observer_count": self._integer_value(checklist_data.get("numObservers")),
             "group": "",
             "species_count": checklist_data["numSpecies"],
             "date": date,
@@ -466,9 +464,7 @@ class APILoader:
             "duration": self._integer_value(duration),
             "distance": self._decimal_value(distance),
             "area": self._decimal_value(area),
-            "complete": self._boolean_value(
-                checklist_data.get("allObsReported", False)
-            ),
+            "complete": checklist_data.get("allObsReported", False),
             "comments": "",
             "url": "",
         }
@@ -703,7 +699,7 @@ class MyDataLoader:
             "duration": self._integer_value(data["Duration (Min)"]),
             "distance": self._decimal_value(data["Distance Traveled (km)"]),
             "area": self._decimal_value(data["Area Covered (ha)"]),
-            "complete": self._boolean_value(data["All Obs Reported"]),
+            "complete": data["All Obs Reported"] == "1",
             "comments": data["Checklist Comments"] or "",
             "url": "",
         }
