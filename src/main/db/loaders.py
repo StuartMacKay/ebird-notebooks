@@ -17,18 +17,14 @@ class BasicDatasetLoader:
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
 
-    @staticmethod
-    def _cast_value(value, cast):
-        return cast(value) if value else None
-
     def _boolean_value(self, value):
-        return self._cast_value(value, bool)
+        return bool(value) if value else None
 
     def _integer_value(self, value):
-        return self._cast_value(value, int)
+        return int(value) if value else None
 
     def _decimal_value(self, value):
-        return self._cast_value(value, decimal.Decimal)
+        return decimal.Decimal(value) if value else None
 
     @staticmethod
     def _update(obj, values):
@@ -262,18 +258,14 @@ class APILoader:
         self.api_key = api_key
         self.engine = create_engine(db_url)
 
-    @staticmethod
-    def _cast_value(value, cast):
-        return cast(value) if value is not None else None
-
     def _boolean_value(self, value):
-        return self._cast_value(value, bool)
+        return bool(value) if value else None
 
     def _integer_value(self, value):
-        return self._cast_value(value, int)
+        return int(value) if value else None
 
     def _decimal_value(self, value):
-        return self._cast_value(value, decimal.Decimal)
+        return decimal.Decimal(value) if value else None
 
     @staticmethod
     def _get_observation_global_identifier(row):
@@ -565,18 +557,14 @@ class MyDataLoader:
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
 
-    @staticmethod
-    def _cast_value(value, cast):
-        return cast(value) if value else None
-
     def _boolean_value(self, value):
-        return self._cast_value(value, bool)
+        return bool(value) if value else None
 
     def _integer_value(self, value):
-        return self._cast_value(value, int)
+        return int(value) if value else None
 
     def _decimal_value(self, value):
-        return self._cast_value(value, decimal.Decimal)
+        return decimal.Decimal(value) if value else None
 
     @staticmethod
     def _update(obj, values):
