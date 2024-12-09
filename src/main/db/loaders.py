@@ -13,43 +13,46 @@ from sqlalchemy.orm import Session
 from .models import Checklist, Location, Observation, Observer, Species
 
 
+def _boolean_value(value):
+    return bool(value) if value else None
+
+
+def _integer_value(value):
+    return int(value) if value else None
+
+
+def _decimal_value(value):
+    return decimal.Decimal(value) if value else None
+
+
+def _update(obj, values):
+    for key, value in values.items():
+        setattr(obj, key, value)
+    return obj
+
+
+def _get_checklist_status(
+    session, identifier: str, last_edited: str
+) -> tuple[bool, bool]:
+    last_edited_date = dt.datetime.fromisoformat(last_edited)
+
+    stmt = select(Checklist.edited).where(Checklist.identifier == identifier)
+    if row := session.execute(stmt).first():
+        if row[0] < last_edited_date:
+            new = False
+            modified = True
+        else:
+            new = False
+            modified = False
+    else:
+        new = True
+        modified = False
+    return new, modified
+
+
 class BasicDatasetLoader:
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
-
-    def _boolean_value(self, value):
-        return bool(value) if value else None
-
-    def _integer_value(self, value):
-        return int(value) if value else None
-
-    def _decimal_value(self, value):
-        return decimal.Decimal(value) if value else None
-
-    @staticmethod
-    def _update(obj, values):
-        for key, value in values.items():
-            setattr(obj, key, value)
-        return obj
-
-    @staticmethod
-    def _get_checklist_status(
-        session, identifier: str, last_edited: str
-    ) -> tuple[bool, bool]:
-        last_edited_date = dt.datetime.fromisoformat(last_edited)
-
-        stmt = select(Checklist.edited).where(Checklist.identifier == identifier)
-        if row := session.execute(stmt).first():
-            if row[0] < last_edited_date:
-                new = False
-                modified = True
-            else:
-                new = False
-                modified = False
-        else:
-            new = True
-            modified = True
-        return new, modified
 
     def _get_location(self, session, row):
         identifier = row["LOCALITY ID"]
@@ -66,8 +69,8 @@ class BasicDatasetLoader:
             "state_code": row["STATE CODE"],
             "country": row["COUNTRY"],
             "country_code": row["COUNTRY CODE"],
-            "latitude": self._decimal_value(row["LATITUDE"]),
-            "longitude": self._decimal_value(row["LONGITUDE"]),
+            "latitude": _decimal_value(row["LATITUDE"]),
+            "longitude": _decimal_value(row["LONGITUDE"]),
             "iba_code": row["IBA CODE"],
             "bcr_code": row["BCR CODE"],
             "usfws_code": row["USFWS CODE"],
@@ -77,7 +80,7 @@ class BasicDatasetLoader:
 
         stmt = select(Location).where(Location.identifier == identifier)
         if row := session.execute(stmt).first():
-            location = self._update(row[0], values)
+            location = _update(row[0], values)
         else:
             location = Location(created=timestamp, **values)
         session.add(location)
@@ -91,7 +94,7 @@ class BasicDatasetLoader:
 
         stmt = select(Observer).where(Observer.identifier == identifier)
         if row := session.execute(stmt).first():
-            observer = self._update(row[0], values)
+            observer = _update(row[0], values)
         else:
             observer = Observer(created=timestamp, **values)
         session.add(observer)
@@ -118,7 +121,7 @@ class BasicDatasetLoader:
 
         stmt = select(Species).where(Species.identifier == identifier)
         if row := session.execute(stmt).first():
-            species = self._update(row[0], values)
+            species = _update(row[0], values)
         else:
             species = Species(created=timestamp, **values)
         session.add(species)
@@ -129,7 +132,7 @@ class BasicDatasetLoader:
         timestamp = dt.datetime.now()
 
         if re.match(r"\d+", row["OBSERVATION COUNT"]):
-            count = self._integer_value(row["OBSERVATION COUNT"])
+            count = _integer_value(row["OBSERVATION COUNT"])
             if count == 0:
                 count = None
         else:
@@ -148,9 +151,9 @@ class BasicDatasetLoader:
             "breeding_category": row["BREEDING CATEGORY"],
             "behavior_code": row["BEHAVIOR CODE"],
             "age_sex": row["AGE/SEX"],
-            "media": self._boolean_value(row["HAS MEDIA"]),
-            "approved": self._boolean_value(row["APPROVED"]),
-            "reviewed": self._boolean_value(row["REVIEWED"]),
+            "media": _boolean_value(row["HAS MEDIA"]),
+            "approved": _boolean_value(row["APPROVED"]),
+            "reviewed": _boolean_value(row["REVIEWED"]),
             "reason": row["REASON"],
             "comments": row["SPECIES COMMENTS"],
         }
@@ -159,7 +162,7 @@ class BasicDatasetLoader:
         if row := session.execute(stmt).first():
             observation = row[0]
             if observation.edited < checklist.edited:
-                observation = self._update(row[0], values)
+                observation = _update(row[0], values)
                 session.add(observation)
         else:
             observation = Observation(created=timestamp, **values)
@@ -189,17 +192,17 @@ class BasicDatasetLoader:
             "protocol": row["PROTOCOL TYPE"],
             "protocol_code": row["PROTOCOL CODE"],
             "project_code": row["PROJECT CODE"],
-            "duration": self._integer_value(row["DURATION MINUTES"]),
-            "distance": self._decimal_value(row["EFFORT DISTANCE KM"]),
-            "area": self._decimal_value(row["EFFORT AREA HA"]),
-            "complete": self._boolean_value(row["ALL SPECIES REPORTED"]),
+            "duration": _integer_value(row["DURATION MINUTES"]),
+            "distance": _decimal_value(row["EFFORT DISTANCE KM"]),
+            "area": _decimal_value(row["EFFORT AREA HA"]),
+            "complete": _boolean_value(row["ALL SPECIES REPORTED"]),
             "comments": row["TRIP COMMENTS"],
             "url": "",
         }
 
         stmt = select(Checklist).where(Checklist.identifier == identifier)
         if row := session.execute(stmt).first():
-            checklist = self._update(row[0], values)
+            checklist = _update(row[0], values)
         else:
             checklist = Checklist(created=timestamp, **values)
         session.add(checklist)
@@ -219,7 +222,7 @@ class BasicDatasetLoader:
                     identifier = row["GLOBAL UNIQUE IDENTIFIER"]
                     last_edited = row["LAST EDITED DATE"]
 
-                    new, modified = self._get_checklist_status(
+                    new, modified = _get_checklist_status(
                         session, identifier, last_edited
                     )
 
@@ -258,39 +261,9 @@ class APILoader:
         self.api_key = api_key
         self.engine = create_engine(db_url)
 
-    def _boolean_value(self, value):
-        return bool(value) if value else None
-
-    def _integer_value(self, value):
-        return int(value) if value else None
-
-    def _decimal_value(self, value):
-        return decimal.Decimal(value) if value else None
-
     @staticmethod
     def _get_observation_global_identifier(row):
         return f"URN:CornellLabOfOrnithology:{row['projId']}:{row['obsId']}"
-
-    @staticmethod
-    def _update(obj, values):
-        for key, value in values.items():
-            setattr(obj, key, value)
-        return obj
-
-    def _get_checklist_status(self, session, identifier, last_edited):
-        last_edited_date = dt.datetime.fromisoformat(last_edited)
-        stmt = select(Checklist.edited).where(Checklist.identifier == identifier)
-        if row := session.execute(stmt).first():
-            if row[0] < last_edited_date:
-                new = False
-                modified = True
-            else:
-                new = False
-                modified = False
-        else:
-            new = True
-            modified = False
-        return new, modified
 
     def _fetch_visits(self, region, date):
         sys.stdout.write(f"Fetching visits: {region}, {date}\n")
@@ -338,13 +311,13 @@ class APILoader:
             "bcr_code": "",
             "usfws_code": "",
             "atlas_block": "",
-            "latitude": self._decimal_value(row["latitude"]),
-            "longitude": self._decimal_value(row["longitude"]),
+            "latitude": _decimal_value(row["latitude"]),
+            "longitude": _decimal_value(row["longitude"]),
             "url": "",
         }
         stmt = select(Location).where(Location.identifier == identifier)
         if row := session.execute(stmt).first():
-            location = self._update(row[0], values)
+            location = _update(row[0], values)
         else:
             location = Location(created=timestamp, **values)
         session.add(location)
@@ -363,7 +336,7 @@ class APILoader:
         }
         stmt = select(Observer).where(Observer.name == name)
         if row := session.execute(stmt).first():
-            observer = self._update(row[0], values)
+            observer = _update(row[0], values)
         else:
             observer = Observer(created=timestamp, **values)
         session.add(observer)
@@ -379,7 +352,7 @@ class APILoader:
         timestamp = dt.datetime.now()
 
         if re.match(r"\d+", data["howManyStr"]):
-            count = self._integer_value(data["howManyStr"])
+            count = _integer_value(data["howManyStr"])
             if count == 0:
                 count = None
         else:
@@ -406,7 +379,7 @@ class APILoader:
         }
         stmt = select(Observation).where(Observation.identifier == identifier)
         if row := session.execute(stmt).first():
-            observation = self._update(row[0], values)
+            observation = _update(row[0], values)
         else:
             observation = Observation(created=timestamp, **values)
         session.add(observation)
@@ -453,7 +426,7 @@ class APILoader:
             "edited": edited,
             "location": self._get_location(session, location_data),
             "observer": self._get_observer(session, checklist_data),
-            "observer_count": self._integer_value(checklist_data.get("numObservers")),
+            "observer_count": _integer_value(checklist_data.get("numObservers")),
             "group": "",
             "species_count": checklist_data["numSpecies"],
             "date": date,
@@ -461,9 +434,9 @@ class APILoader:
             "protocol": "",
             "protocol_code": checklist_data["protocolId"],
             "project_code": checklist_data["projId"],
-            "duration": self._integer_value(duration),
-            "distance": self._decimal_value(distance),
-            "area": self._decimal_value(area),
+            "duration": _integer_value(duration),
+            "distance": _decimal_value(distance),
+            "area": _decimal_value(area),
             "complete": checklist_data.get("allObsReported", False),
             "comments": "",
             "url": "",
@@ -471,7 +444,7 @@ class APILoader:
 
         stmt = select(Checklist).where(Checklist.identifier == identifier)
         if row := session.execute(stmt).first():
-            checklist = self._update(row[0], values)
+            checklist = _update(row[0], values)
         else:
             checklist = Checklist(created=timestamp, **values)
         session.add(checklist)
@@ -496,9 +469,7 @@ class APILoader:
                 data = self._fetch_checklist(visit["subId"])
                 identifier = visit["subId"]
                 last_edited = data["lastEditedDt"]
-                new, modified = self._get_checklist_status(
-                    session, identifier, last_edited
-                )
+                new, modified = _get_checklist_status(session, identifier, last_edited)
                 if new or modified:
                     checklist = self._get_checklist(session, data, visit["loc"])
                     if modified:
@@ -553,21 +524,6 @@ class MyDataLoader:
     def __init__(self, db_url):
         self.engine = create_engine(db_url)
 
-    def _boolean_value(self, value):
-        return bool(value) if value else None
-
-    def _integer_value(self, value):
-        return int(value) if value else None
-
-    def _decimal_value(self, value):
-        return decimal.Decimal(value) if value else None
-
-    @staticmethod
-    def _update(obj, values):
-        for key, value in values.items():
-            setattr(obj, key, value)
-        return obj
-
     def _get_location(self, session, data):
         identifier = data["Location ID"]
         timestamp = dt.datetime.now()
@@ -587,14 +543,14 @@ class MyDataLoader:
             "bcr_code": "",
             "usfws_code": "",
             "atlas_block": "",
-            "latitude": self._decimal_value(data["Latitude"]),
-            "longitude": self._decimal_value(data["Longitude"]),
+            "latitude": _decimal_value(data["Latitude"]),
+            "longitude": _decimal_value(data["Longitude"]),
             "url": "",
         }
 
         stmt = select(Location).where(Location.identifier == identifier)
         if data := session.execute(stmt).first():
-            location = self._update(data[0], values)
+            location = _update(data[0], values)
         else:
             location = Location(created=timestamp, **values)
         session.add(location)
@@ -607,7 +563,7 @@ class MyDataLoader:
 
         stmt = select(Observer).where(Observer.name == name)
         if data := session.execute(stmt).first():
-            observer = self._update(data[0], values)
+            observer = _update(data[0], values)
         else:
             observer = Observer(created=timestamp, **values)
         session.add(observer)
@@ -634,7 +590,7 @@ class MyDataLoader:
 
         stmt = select(Species).where(Species.order == order)
         if data := session.execute(stmt).first():
-            species = self._update(data[0], values)
+            species = _update(data[0], values)
         else:
             species = Species(created=timestamp, **values)
         session.add(species)
@@ -644,7 +600,7 @@ class MyDataLoader:
         timestamp = dt.datetime.now()
 
         if re.match(r"\d+", data["Count"]):
-            count = self._integer_value(data["Count"])
+            count = _integer_value(data["Count"])
             if count == 0:
                 count = None
         else:
@@ -688,7 +644,7 @@ class MyDataLoader:
             "identifier": identifier,
             "location": self._get_location(session, data),
             "observer": observer,
-            "observer_count": self._integer_value(data["Number of Observers"]),
+            "observer_count": _integer_value(data["Number of Observers"]),
             "group": "",
             "species_count": None,
             "date": dt.datetime.strptime(data["Date"], "%Y-%m-%d").date(),
@@ -696,9 +652,9 @@ class MyDataLoader:
             "protocol": data["Protocol"],
             "protocol_code": "",
             "project_code": "",
-            "duration": self._integer_value(data["Duration (Min)"]),
-            "distance": self._decimal_value(data["Distance Traveled (km)"]),
-            "area": self._decimal_value(data["Area Covered (ha)"]),
+            "duration": _integer_value(data["Duration (Min)"]),
+            "distance": _decimal_value(data["Distance Traveled (km)"]),
+            "area": _decimal_value(data["Area Covered (ha)"]),
             "complete": data["All Obs Reported"] == "1",
             "comments": data["Checklist Comments"] or "",
             "url": "",
@@ -706,7 +662,7 @@ class MyDataLoader:
 
         stmt = select(Checklist).where(Checklist.identifier == identifier)
         if data := session.execute(stmt).first():
-            checklist = self._update(data[0], values)
+            checklist = _update(data[0], values)
         else:
             checklist = Checklist(created=timestamp, **values)
         session.add(checklist)
