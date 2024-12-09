@@ -532,7 +532,13 @@ class APILoader:
         sys.stdout.write(f"{updated} checklists updated\n")
         sys.stdout.write(f"{unchanged} checklists unchanged\n")
 
-    def load_taxonomy(self):
+
+class SpeciesLoader:
+    def __init__(self, api_key, db_url):
+        self.api_key = api_key
+        self.engine = create_engine(db_url)
+
+    def load(self):
         with Session(self.engine) as session:
             timestamp = dt.datetime.now()
             for row in get_taxonomy(self.api_key):
