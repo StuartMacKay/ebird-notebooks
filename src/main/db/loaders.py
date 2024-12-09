@@ -420,6 +420,19 @@ class APILoader:
         session.add(observation)
         return observation
 
+    @staticmethod
+    def _delete_orphans(session, checklist):
+        # If the checklist was updated, then any observations with
+        # an edited date earlier than checklist edited date must
+        # have been deleted.
+        for observation in checklist.observations:
+            if observation.edited < checklist.edited:
+                session.delete(observation)
+                species = observation.species
+                count = observation.count
+                sys.stdout.write(f"Observation deleted: {species} - {count}\n")
+                sys.stdout.flush()
+
     def _get_checklist(self, session, checklist_data, location_data):
         identifier = checklist_data["subId"]
         timestamp = dt.datetime.now()
@@ -508,7 +521,9 @@ class APILoader:
                             session, identifier, last_edited
                         )
                         if new or modified:
-                            self._get_checklist(session, data, visit["loc"])
+                            checklist = self._get_checklist(session, data, visit["loc"])
+                            if modified:
+                                self._delete_orphans(session, checklist)
 
                         if new:
                             added += 1
