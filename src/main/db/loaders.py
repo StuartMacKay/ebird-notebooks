@@ -263,104 +263,77 @@ class APILoader:
         self.engine = create_engine(db_url)
 
     @staticmethod
-    def _get_value(value, cast):
+    def _cast_value(value, cast):
         return cast(value) if value is not None else None
 
-    def _get_boolean_value(self, value):
-        return self._get_value(value, bool)
+    def _boolean_value(self, value):
+        return self._cast_value(value, bool)
 
-    def _get_integer_value(self, value):
-        return self._get_value(value, int)
+    def _integer_value(self, value):
+        return self._cast_value(value, int)
 
-    def _get_decimal_value(self, value):
-        return self._get_value(value, decimal.Decimal)
+    def _decimal_value(self, value):
+        return self._cast_value(value, decimal.Decimal)
 
     @staticmethod
     def _get_observation_global_identifier(row):
         return f"URN:CornellLabOfOrnithology:{row['projId']}:{row['obsId']}"
 
     @staticmethod
-    def _get_species(session, obs):
-        stmt = select(Species).where(Species.code == obs["speciesCode"])
-        return session.execute(stmt).first()[0]
-
-    @staticmethod
-    def _create_or_update(session, model, identifier, last_edited, defaults):
-        stmt = select(model).where(model.identifier == identifier)
-        if row := session.execute(stmt).first():
-            obj = row[0]
-            if last_edited > obj.edited:
-                for key, value in defaults.items():
-                    setattr(obj, key, value)
-                obj.modified = dt.datetime.now()
-                obj.edited = last_edited
-                session.add(obj)
-        else:
-            timestamp = dt.datetime.now()
-            obj = model(
-                created=timestamp,
-                modified=timestamp,
-                edited=last_edited,
-                identifier=identifier,
-                **defaults,
-            )
-            session.add(obj)
+    def _update(obj, values):
+        for key, value in values.items():
+            setattr(obj, key, value)
         return obj
 
-    def _load_observer(self, session, last_edited, checklist):
-        # The observer's name is used as the unique identifier, even
-        # though it is not necessarily unique. However this works until
-        # better solution is found.
-        identifier = checklist["userDisplayName"]
-        defaults = {
-            "name": "",
-        }
-        return self._create_or_update(
-            session, Observer, identifier, last_edited, defaults
-        )
-
-    def _load_checklist(self, session, last_edited, checklist):
-        identifier = checklist["subId"]
-        date_str = checklist["obsDt"].split(" ", 1)[0]
-        date = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
-        if checklist["obsTimeValid"]:
-            time_str = checklist["obsDt"].split(" ", 1)[1]
-            time = dt.datetime.strptime(time_str, "%H:%M").time()
+    def _get_checklist_status(self, session, identifier, last_edited):
+        last_edited_date = dt.datetime.fromisoformat(last_edited)
+        stmt = select(Checklist.edited).where(Checklist.identifier == identifier)
+        if row := session.execute(stmt).first():
+            if row[0] < last_edited_date:
+                new = False
+                modified = True
+            else:
+                new = False
+                modified = False
         else:
-            time = None
-        if "durationHrs" in checklist:
-            duration = checklist["durationHrs"] * 60.0
-        else:
-            duration = None
-        distance = checklist.get("distKm", None)
-        area = checklist.get("areaHa", None)
-        defaults = {
-            "location": self._load_location(session, last_edited, checklist["loc"]),
-            "observer": self._load_observer(session, last_edited, checklist),
-            "observer_count": self._get_integer_value(
-                checklist.get("numObservers", None)
-            ),
-            "group": "",
-            "species_count": checklist["numSpecies"],
-            "date": date,
-            "time": time,
-            "protocol": "",
-            "protocol_code": checklist["protocolId"],
-            "project_code": checklist["projId"],
-            "duration": self._get_integer_value(duration),
-            "distance": self._get_decimal_value(distance),
-            "area": self._get_decimal_value(area),
-            "complete": self._get_boolean_value(checklist.get("allObsReported", False)),
-            "comments": "",
-            "url": "",
-        }
-        return self._create_or_update(
-            session, Checklist, identifier, last_edited, defaults
-        )
+            new = True
+            modified = False
+        return new, modified
 
-    def _load_location(self, session, last_edited, row):
+    def _fetch_visits(self, region, date):
+        sys.stdout.write(f"Fetching visits: {region}, {date}\n")
+        sys.stdout.flush()
+
+        try:
+            visits = get_visits(self.api_key, region, date=date, max_results=200)
+            sys.stdout.write("Visits made: %d\n" % len(visits))
+            sys.stdout.flush()
+        except (URLError, HTTPError) as err:
+            visits = None
+            sys.stdout.write(f"Visits not fetched: {region}, {date}\n")
+            sys.stdout.write(f"{err}\n")
+            sys.stdout.flush()
+
+        return visits
+
+    def _fetch_checklist(self, identifier):
+        try:
+            sys.stdout.write(f"Fetching checklist: {identifier}\n")
+            sys.stdout.flush()
+            data = get_checklist(self.api_key, identifier)
+        except (URLError, HTTPError):
+            data = None
+            sys.stdout.write(f"Checklist not fetched: {identifier}\n")
+            sys.stdout.write("%{err}\n")
+            sys.stdout.flush()
+        return data
+
+    def _get_location(self, session, row):
         identifier = row["locId"]
-        defaults = {
+        timestamp = dt.datetime.now()
+        values = {
+            "modified": timestamp,
+            "identifier": identifier,
             "type": "",
             "name": row["name"],
             "county": row["subnational2Name"],
@@ -373,27 +346,61 @@ class APILoader:
             "bcr_code": "",
             "usfws_code": "",
             "atlas_block": "",
-            "latitude": self._get_decimal_value(row["latitude"]),
-            "longitude": self._get_decimal_value(row["longitude"]),
+            "latitude": self._decimal_value(row["latitude"]),
+            "longitude": self._decimal_value(row["longitude"]),
             "url": "",
         }
-        return self._create_or_update(
-            session, Location, identifier, last_edited, defaults
-        )
+        stmt = select(Location).where(Location.identifier == identifier)
+        if row := session.execute(stmt).first():
+            location = self._update(row[0], values)
+        else:
+            location = Location(created=timestamp, **values)
+        session.add(location)
+        return location
 
-    def _load_observation(self, session, last_edited, checklist, observation):
-        identifier = self._get_observation_global_identifier(observation)
-        if re.match(r"\d+", observation["howManyStr"]):
-            count = self._get_integer_value(observation["howManyStr"])
+    def _get_observer(self, session, data):
+        # The observer's name is used as the unique identifier, even
+        # though it is not necessarily unique. However this works until
+        # better solution is found.
+        name = data["userDisplayName"]
+        timestamp = dt.datetime.now()
+        values = {
+            "modified": timestamp,
+            "identifier": "",
+            "name": name,
+        }
+        stmt = select(Observer).where(Observer.name == name)
+        if row := session.execute(stmt).first():
+            observer = self._update(row[0], values)
+        else:
+            observer = Observer(created=timestamp, **values)
+        session.add(observer)
+        return observer
+
+    @staticmethod
+    def _get_species(session, obs):
+        stmt = select(Species).where(Species.code == obs["speciesCode"])
+        return session.execute(stmt).first()[0]
+
+    def _get_observation(self, session, data, checklist):
+        identifier = self._get_observation_global_identifier(data)
+        timestamp = dt.datetime.now()
+
+        if re.match(r"\d+", data["howManyStr"]):
+            count = self._integer_value(data["howManyStr"])
             if count == 0:
                 count = None
         else:
             count = None
-        defaults = {
-            "checklist": self._load_checklist(session, last_edited, checklist),
-            "species": self._get_species(session, observation),
-            "observer": self._load_observer(session, last_edited, checklist),
-            "location": self._load_location(session, last_edited, checklist["loc"]),
+
+        values = {
+            "modified": timestamp,
+            "edited": checklist.edited,
+            "identifier": identifier,
+            "checklist": checklist,
+            "location": checklist.location,
+            "observer": checklist.observer,
+            "species": self._get_species(session, data),
             "count": count,
             "breeding_code": "",
             "breeding_category": "",
@@ -405,9 +412,119 @@ class APILoader:
             "reason": "",
             "comments": "",
         }
-        return self._create_or_update(
-            session, Observation, identifier, last_edited, defaults
-        )
+        stmt = select(Observation).where(Observation.identifier == identifier)
+        if row := session.execute(stmt).first():
+            observation = self._update(row[0], values)
+        else:
+            observation = Observation(created=timestamp, **values)
+        session.add(observation)
+        return observation
+
+    def _get_checklist(self, session, checklist_data, location_data):
+        identifier = checklist_data["subId"]
+        timestamp = dt.datetime.now()
+        edited = dt.datetime.fromisoformat(checklist_data["lastEditedDt"])
+
+        date_str = checklist_data["obsDt"].split(" ", 1)[0]
+        date = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+
+        if checklist_data["obsTimeValid"]:
+            time_str = checklist_data["obsDt"].split(" ", 1)[1]
+            time = dt.datetime.strptime(time_str, "%H:%M").time()
+        else:
+            time = None
+
+        if "durationHrs" in checklist_data:
+            duration = checklist_data["durationHrs"] * 60.0
+        else:
+            duration = None
+
+        distance = checklist_data.get("distKm", None)
+        area = checklist_data.get("areaHa", None)
+
+        values = {
+            "modified": timestamp,
+            "identifier": identifier,
+            "edited": edited,
+            "location": self._get_location(session, location_data),
+            "observer": self._get_observer(session, checklist_data),
+            "observer_count": self._integer_value(
+                checklist_data.get("numObservers", None)
+            ),
+            "group": "",
+            "species_count": checklist_data["numSpecies"],
+            "date": date,
+            "time": time,
+            "protocol": "",
+            "protocol_code": checklist_data["protocolId"],
+            "project_code": checklist_data["projId"],
+            "duration": self._integer_value(duration),
+            "distance": self._decimal_value(distance),
+            "area": self._decimal_value(area),
+            "complete": self._boolean_value(
+                checklist_data.get("allObsReported", False)
+            ),
+            "comments": "",
+            "url": "",
+        }
+
+        stmt = select(Checklist).where(Checklist.identifier == identifier)
+        if row := session.execute(stmt).first():
+            checklist = self._update(row[0], values)
+        else:
+            checklist = Checklist(created=timestamp, **values)
+        session.add(checklist)
+
+        for observation_data in checklist_data["obs"]:
+            try:
+                self._get_observation(session, observation_data, checklist)
+            except Exception as err:
+                sys.stdout.write(
+                    f"Observation not added: {identifier}, {checklist_data["obsId"]}"
+                )
+                sys.stdout.write(f"{err}\n")
+                sys.stdout.flush()
+
+        return checklist
+
+    def load(self, regions, back):
+        today = dt.date.today()
+        areas = [region.strip() for region in regions.split(",")]
+        dates = [today - dt.timedelta(days=offset) for offset in range(back)]
+        added = updated = unchanged = 0
+
+        sys.stdout.write("Fetching visits...\n")
+        sys.stdout.write("For areas: %s\n" % ", ".join(areas))
+        sys.stdout.write("For the past %d days\n" % back)
+
+        with Session(self.engine) as session:
+            for date in dates:
+                for area in areas:
+                    for visit in self._fetch_visits(area, date):
+                        data = self._fetch_checklist(visit["subId"])
+                        identifier = visit["subId"]
+                        last_edited = data["lastEditedDt"]
+                        new, modified = self._get_checklist_status(
+                            session, identifier, last_edited
+                        )
+                        if new or modified:
+                            self._get_checklist(session, data, visit["loc"])
+
+                        if new:
+                            added += 1
+                        elif modified:
+                            updated += 1
+                        else:
+                            unchanged += 1
+
+                    session.commit()
+
+        total = added + updated + unchanged
+
+        sys.stdout.write(f"{total} checklists fetched\n")
+        sys.stdout.write(f"{added} checklists added\n")
+        sys.stdout.write(f"{updated} checklists updated\n")
+        sys.stdout.write(f"{unchanged} checklists unchanged\n")
 
     def load_taxonomy(self):
         with Session(self.engine) as session:
@@ -417,7 +534,6 @@ class APILoader:
                     Species(
                         created=timestamp,
                         modified=timestamp,
-                        edited=timestamp,
                         identifier="",
                         code=row["speciesCode"],
                         category=row["category"],
@@ -431,83 +547,6 @@ class APILoader:
                     )
                 )
             session.commit()
-
-    def load(self, regions, back):
-        today = dt.date.today()
-        loaded = dt.datetime.now()
-        areas = [region.strip() for region in regions.split(",")]
-        dates = [today - dt.timedelta(days=offset) for offset in range(back)]
-        added = updated = unchanged = 0
-        visits = []
-
-        sys.stdout.write("Fetching visits...\n")
-        sys.stdout.write("For areas: %s\n" % ", ".join(areas))
-        sys.stdout.write("For the past %d days\n" % back)
-
-        with Session(self.engine) as session:
-            for date in dates:
-                sys.stdout.write("Date: %s\n" % date)
-                for area in areas:
-                    try:
-                        results = get_visits(
-                            self.api_key, area, date=date, max_results=200
-                        )
-                        visits.extend(results)
-                        sys.stdout.write(
-                            "%s: %d checklists submitted\n" % (area, len(results))
-                        )
-                        sys.stdout.flush()
-                    except (URLError, HTTPError) as err:
-                        sys.stdout.write(
-                            "Error: Could not fetch visits for %s\n" % area
-                        )
-                        sys.stdout.write("%s\n" % str(err))
-                        sys.stdout.flush()
-
-            sys.stdout.write("Total number of checklists: %d\n" % len(visits))
-            sys.stdout.write("Fetching checklists...\n")
-
-            for visit in visits:
-                try:
-                    identifier = visit["subId"]
-                    location = visit["loc"]["name"]
-                    area = visit["loc"]["subnational1Code"]
-                    sys.stdout.write(f"{identifier}, {area}, {location}\n")
-                    checklist = get_checklist(self.api_key, identifier)
-                    checklist["loc"] = visit["loc"]
-                    last_edited = dt.datetime.fromisoformat(checklist["lastEditedDt"])
-                    for observation in checklist.pop("obs"):
-                        try:
-                            observation = self._load_observation(
-                                session, last_edited, checklist, observation
-                            )
-                            if observation.created > loaded:
-                                added += 1
-                            elif observation.modified > loaded:
-                                updated += 1
-                            else:
-                                unchanged += 1
-                        except Exception as err:
-                            sys.stdout.write("Error: %s\n\n" % str(err))
-                            sys.stdout.write("Checklist: %s\n\n" % str(checklist))
-                            sys.stdout.write("Observation: %s\n" % str(observation))
-
-                    session.commit()
-                except (URLError, HTTPError) as err:
-                    sys.stdout.write(
-                        "Error: Could not fetch checklist %s\n" % identifier
-                    )
-                    sys.stdout.write("%s\n" % str(err))
-                    sys.stdout.flush()
-
-        total = added + updated + unchanged
-
-        sys.stdout.write("Success\n")
-        sys.stdout.write("%d checklists fetched\n" % len(visits))
-        sys.stdout.write("%d observations added\n" % added)
-        sys.stdout.write("%d observations updated\n" % updated)
-        sys.stdout.write("%d observations unchanged\n" % unchanged)
-        sys.stdout.write("%d observations in total\n" % total)
 
 
 class MyDataLoader:
