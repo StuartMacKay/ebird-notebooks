@@ -500,39 +500,30 @@ class APILoader:
 
         return checklist
 
-    def load(self, regions, back):
-        today = dt.date.today()
-        areas = [region.strip() for region in regions.split(",")]
-        dates = [today - dt.timedelta(days=offset) for offset in range(back)]
+    def load(self, region, date):
         added = updated = unchanged = 0
 
-        sys.stdout.write("Fetching visits...\n")
-        sys.stdout.write("For areas: %s\n" % ", ".join(areas))
-        sys.stdout.write("For the past %d days\n" % back)
-
         with Session(self.engine) as session:
-            for date in dates:
-                for area in areas:
-                    for visit in self._fetch_visits(area, date):
-                        data = self._fetch_checklist(visit["subId"])
-                        identifier = visit["subId"]
-                        last_edited = data["lastEditedDt"]
-                        new, modified = self._get_checklist_status(
-                            session, identifier, last_edited
-                        )
-                        if new or modified:
-                            checklist = self._get_checklist(session, data, visit["loc"])
-                            if modified:
-                                self._delete_orphans(session, checklist)
+            for visit in self._fetch_visits(region, date):
+                data = self._fetch_checklist(visit["subId"])
+                identifier = visit["subId"]
+                last_edited = data["lastEditedDt"]
+                new, modified = self._get_checklist_status(
+                    session, identifier, last_edited
+                )
+                if new or modified:
+                    checklist = self._get_checklist(session, data, visit["loc"])
+                    if modified:
+                        self._delete_orphans(session, checklist)
 
-                        if new:
-                            added += 1
-                        elif modified:
-                            updated += 1
-                        else:
-                            unchanged += 1
+                if new:
+                    added += 1
+                elif modified:
+                    updated += 1
+                else:
+                    unchanged += 1
 
-                    session.commit()
+            session.commit()
 
         total = added + updated + unchanged
 
