@@ -18,79 +18,50 @@ class BasicDatasetLoader:
         self.engine = create_engine(db_url)
 
     @staticmethod
-    def _get_value(value, cast):
+    def _cast_value(value, cast):
         return cast(value) if value else None
 
-    def _get_boolean_value(self, value):
-        return self._get_value(value, bool)
+    def _boolean_value(self, value):
+        return self._cast_value(value, bool)
 
-    def _get_integer_value(self, value):
-        return self._get_value(value, int)
+    def _integer_value(self, value):
+        return self._cast_value(value, int)
 
-    def _get_decimal_value(self, value):
-        return self._get_value(value, decimal.Decimal)
+    def _decimal_value(self, value):
+        return self._cast_value(value, decimal.Decimal)
 
     @staticmethod
-    def _create_or_update(session, model, identifier, last_edited, defaults):
-        stmt = select(model).where(model.identifier == identifier)
-        if row := session.execute(stmt).first():
-            obj = row[0]
-            if last_edited > obj.edited:
-                for key, value in defaults.items():
-                    setattr(obj, key, value)
-                obj.modified = dt.datetime.now()
-                obj.edited = last_edited
-                session.add(obj)
-        else:
-            timestamp = dt.datetime.now()
-            obj = model(
-                created=timestamp,
-                modified=timestamp,
-                edited=last_edited,
-                identifier=identifier,
-                **defaults,
-            )
-            session.add(obj)
-
+    def _update(obj, values):
+        for key, value in values.items():
+            setattr(obj, key, value)
         return obj
 
-    def _load_observer(self, session, last_edited, row):
-        identifier = row["OBSERVER ID"]
-        defaults = {"name": ""}
-        return self._create_or_update(
-            session, Observer, identifier, last_edited, defaults
-        )
+    @staticmethod
+    def _get_checklist_status(
+        session, identifier: str, last_edited: str
+    ) -> tuple[bool, bool]:
+        last_edited_date = dt.datetime.fromisoformat(last_edited)
 
-    def _load_checklist(self, session, last_edited, row):
-        identifier = row["SAMPLING EVENT IDENTIFIER"]
-        if value := row["TIME OBSERVATIONS STARTED"]:
-            time = dt.datetime.strptime(value, "%H:%M:%S").time()
+        stmt = select(Checklist.edited).where(Checklist.identifier == identifier)
+        if row := session.execute(stmt).first():
+            if row[0] < last_edited_date:
+                new = False
+                modified = True
+            else:
+                new = False
+                modified = False
         else:
-            time = None
-        defaults = {
-            "location": self._load_location(session, last_edited, row),
-            "observer": self._load_observer(session, last_edited, row),
-            "group": row["GROUP IDENTIFIER"],
-            "observer_count": row["NUMBER OBSERVERS"],
-            "date": dt.datetime.strptime(row["OBSERVATION DATE"], "%Y-%m-%d").date(),
-            "time": time,
-            "protocol": row["PROTOCOL TYPE"],
-            "protocol_code": row["PROTOCOL CODE"],
-            "project_code": row["PROJECT CODE"],
-            "duration": self._get_integer_value(row["DURATION MINUTES"]),
-            "distance": self._get_decimal_value(row["EFFORT DISTANCE KM"]),
-            "area": self._get_decimal_value(row["EFFORT AREA HA"]),
-            "complete": self._get_boolean_value(row["ALL SPECIES REPORTED"]),
-            "comments": row["TRIP COMMENTS"],
-            "url": "",
-        }
-        return self._create_or_update(
-            session, Checklist, identifier, last_edited, defaults
-        )
+            new = True
+            modified = True
+        return new, modified
 
-    def _load_location(self, session, last_edited, row):
+    def _get_location(self, session, row):
         identifier = row["LOCALITY ID"]
-        defaults = {
+        timestamp = dt.datetime.now()
+
+        values = {
+            "modified": timestamp,
+            "identifier": identifier,
             "type": row["LOCALITY TYPE"],
             "name": row["LOCALITY"],
             "county": row["COUNTY"],
@@ -99,21 +70,44 @@ class BasicDatasetLoader:
             "state_code": row["STATE CODE"],
             "country": row["COUNTRY"],
             "country_code": row["COUNTRY CODE"],
-            "latitude": self._get_decimal_value(row["LATITUDE"]),
-            "longitude": self._get_decimal_value(row["LONGITUDE"]),
+            "latitude": self._decimal_value(row["LATITUDE"]),
+            "longitude": self._decimal_value(row["LONGITUDE"]),
             "iba_code": row["IBA CODE"],
             "bcr_code": row["BCR CODE"],
             "usfws_code": row["USFWS CODE"],
             "atlas_block": row["ATLAS BLOCK"],
             "url": "",
         }
-        return self._create_or_update(
-            session, Location, identifier, last_edited, defaults
-        )
 
-    def _load_species(self, session, last_edited, row):
+        stmt = select(Location).where(Location.identifier == identifier)
+        if row := session.execute(stmt).first():
+            location = self._update(row[0], values)
+        else:
+            location = Location(created=timestamp, **values)
+        session.add(location)
+        return location
+
+    def _get_observer(self, session, row):
+        identifier = row["OBSERVER ID"]
+        timestamp = dt.datetime.now()
+
+        values = {"identifier": identifier, "modified": timestamp, "name": ""}
+
+        stmt = select(Observer).where(Observer.identifier == identifier)
+        if row := session.execute(stmt).first():
+            observer = self._update(row[0], values)
+        else:
+            observer = Observer(created=timestamp, **values)
+        session.add(observer)
+        return observer
+
+    def _get_species(self, session, row):
         identifier = row["TAXON CONCEPT ID"]
-        defaults = {
+        timestamp = dt.datetime.now()
+
+        values = {
+            "modified": timestamp,
+            "identifier": identifier,
             "code": "",
             "order": row["TAXONOMIC ORDER"],
             "category": row["CATEGORY"],
@@ -125,37 +119,95 @@ class BasicDatasetLoader:
             "subspecies_local_name": "",
             "exotic_code": row["EXOTIC CODE"],
         }
-        return self._create_or_update(
-            session, Species, identifier, last_edited, defaults
-        )
 
-    def _load_observation(self, session, last_edited, row):
+        stmt = select(Species).where(Species.identifier == identifier)
+        if row := session.execute(stmt).first():
+            species = self._update(row[0], values)
+        else:
+            species = Species(created=timestamp, **values)
+        session.add(species)
+        return species
+
+    def _get_observation(self, session, row, checklist):
         identifier = row["GLOBAL UNIQUE IDENTIFIER"]
+        timestamp = dt.datetime.now()
+
         if re.match(r"\d+", row["OBSERVATION COUNT"]):
-            count = self._get_integer_value(row["howManyStr"])
+            count = self._integer_value(row["OBSERVATION COUNT"])
             if count == 0:
                 count = None
         else:
             count = None
-        defaults = {
-            "checklist": self._load_checklist(session, last_edited, row),
-            "species": self._load_species(session, last_edited, row),
-            "observer": self._load_observer(session, last_edited, row),
-            "location": self._load_location(session, last_edited, row),
+
+        values = {
+            "modified": timestamp,
+            "edited": checklist.edited,
+            "identifier": identifier,
+            "checklist": checklist,
+            "location": checklist.location,
+            "observer": checklist.observer,
+            "species": self._get_species(session, row),
             "count": count,
             "breeding_code": row["BREEDING CODE"],
             "breeding_category": row["BREEDING CATEGORY"],
             "behavior_code": row["BEHAVIOR CODE"],
             "age_sex": row["AGE/SEX"],
-            "media": self._get_boolean_value(row["HAS MEDIA"]),
-            "approved": self._get_boolean_value(row["APPROVED"]),
-            "reviewed": self._get_boolean_value(row["REVIEWED"]),
+            "media": self._boolean_value(row["HAS MEDIA"]),
+            "approved": self._boolean_value(row["APPROVED"]),
+            "reviewed": self._boolean_value(row["REVIEWED"]),
             "reason": row["REASON"],
             "comments": row["SPECIES COMMENTS"],
         }
-        return self._create_or_update(
-            session, Observation, identifier, last_edited, defaults
-        )
+
+        stmt = select(Observation).where(Observation.identifier == identifier)
+        if row := session.execute(stmt).first():
+            observation = row[0]
+            if observation.edited < checklist.edited:
+                observation = self._update(row[0], values)
+                session.add(observation)
+        else:
+            observation = Observation(created=timestamp, **values)
+            session.add(observation)
+        return observation
+
+    def _get_checklist(self, session, row, location, observer):
+        identifier = row["SAMPLING EVENT IDENTIFIER"]
+        timestamp = dt.datetime.now()
+        edited = dt.datetime.fromisoformat(row["LAST EDITED DATE"])
+
+        if value := row["TIME OBSERVATIONS STARTED"]:
+            time = dt.datetime.strptime(value, "%H:%M:%S").time()
+        else:
+            time = None
+
+        values = {
+            "modified": timestamp,
+            "identifier": identifier,
+            "edited": edited,
+            "location": location,
+            "observer": observer,
+            "group": row["GROUP IDENTIFIER"],
+            "observer_count": row["NUMBER OBSERVERS"],
+            "date": dt.datetime.strptime(row["OBSERVATION DATE"], "%Y-%m-%d").date(),
+            "time": time,
+            "protocol": row["PROTOCOL TYPE"],
+            "protocol_code": row["PROTOCOL CODE"],
+            "project_code": row["PROJECT CODE"],
+            "duration": self._integer_value(row["DURATION MINUTES"]),
+            "distance": self._decimal_value(row["EFFORT DISTANCE KM"]),
+            "area": self._decimal_value(row["EFFORT AREA HA"]),
+            "complete": self._boolean_value(row["ALL SPECIES REPORTED"]),
+            "comments": row["TRIP COMMENTS"],
+            "url": "",
+        }
+
+        stmt = select(Checklist).where(Checklist.identifier == identifier)
+        if row := session.execute(stmt).first():
+            checklist = self._update(row[0], values)
+        else:
+            checklist = Checklist(created=timestamp, **values)
+        session.add(checklist)
+        return checklist
 
     def load(self, path):
         if not os.path.exists(path):
@@ -166,19 +218,34 @@ class BasicDatasetLoader:
         with Session(self.engine) as session:
             with open(path) as csvfile:
                 added = updated = unchanged = loaded = 0
-                date_loaded = dt.datetime.now()
                 reader = csv.DictReader(csvfile, delimiter="\t")
                 for row in reader:
-                    last_edited = dt.datetime.fromisoformat(row["LAST EDITED DATE"])
-                    observation = self._load_observation(session, last_edited, row)
-                    if observation.created > date_loaded:
+                    identifier = row["GLOBAL UNIQUE IDENTIFIER"]
+                    last_edited = row["LAST EDITED DATE"]
+
+                    new, modified = self._get_checklist_status(
+                        session, identifier, last_edited
+                    )
+
+                    if new or modified:
+                        location = self._get_location(session, row)
+                        observer = self._get_observer(session, row)
+                        checklist = self._get_checklist(
+                            session, row, location, observer
+                        )
+                        self._get_observation(session, row, checklist)
+
+                        session.commit()
+
+                    if new:
                         added += 1
-                    elif observation.modified > date_loaded:
+                    elif modified:
                         updated += 1
                     else:
                         unchanged += 1
+
                     loaded += 1
-                    session.commit()
+
                     if loaded % 10 == 0:
                         sys.stdout.write("Records loaded: %d\r" % loaded)
                         sys.stdout.flush()
