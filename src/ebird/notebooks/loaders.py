@@ -57,6 +57,25 @@ def _get_checklist_status(
     return new, modified
 
 
+def _create_or_update_location(
+    session: Session, identifier: str, values: dict[str, Any]
+) -> Location:
+    timestamp: dt.datetime = dt.datetime.now()
+    row: Row[tuple[Location]]
+    location: Location
+
+    stmt: Select[tuple[Location]] = select(Location).where(
+        Location.identifier == identifier
+    )
+    if row := session.execute(stmt).first():
+        location = _update(row[0], values)
+        location.modified = timestamp
+    else:
+        location = Location(created=timestamp, modified=timestamp, **values)
+    session.add(location)
+    return location
+
+
 class BasicDatasetLoader:
     def __init__(self, db_url: str) -> None:
         self.engine: Engine = create_engine(db_url)
@@ -64,13 +83,8 @@ class BasicDatasetLoader:
     @staticmethod
     def _get_location(session: Session, data: dict[str, str]) -> Location:
         identifier: str = data["LOCALITY ID"]
-        timestamp: dt.datetime = dt.datetime.now()
-        stmt: Select[tuple[Location]]
-        row: Row[tuple[Location]]
-        location: Location
 
         values: dict[str, Any] = {
-            "modified": timestamp,
             "identifier": identifier,
             "type": data["LOCALITY TYPE"],
             "name": data["LOCALITY"],
@@ -89,13 +103,7 @@ class BasicDatasetLoader:
             "url": "",
         }
 
-        stmt = select(Location).where(Location.identifier == identifier)
-        if row := session.execute(stmt).first():
-            location = _update(row[0], values)
-        else:
-            location = Location(created=timestamp, **values)
-        session.add(location)
-        return location
+        return _create_or_update_location(session, identifier, values)
 
     @staticmethod
     def _get_observer(session: Session, data: dict[str, str]) -> Observer:
@@ -345,13 +353,8 @@ class APILoader:
     @staticmethod
     def _get_location(session: Session, data: dict[str, Any]) -> Location:
         identifier: str = data["locId"]
-        timestamp: dt.datetime = dt.datetime.now()
-        stmt: Select[tuple[Location]]
-        row: Row[tuple[Location]]
-        location: Location
 
         values: dict[str, Any] = {
-            "modified": timestamp,
             "identifier": identifier,
             "type": "",
             "name": data["name"],
@@ -370,13 +373,7 @@ class APILoader:
             "url": "",
         }
 
-        stmt = select(Location).where(Location.identifier == identifier)
-        if row := session.execute(stmt).first():
-            location = _update(row[0], values)
-        else:
-            location = Location(created=timestamp, **values)
-        session.add(location)
-        return location
+        return _create_or_update_location(session, identifier, values)
 
     @staticmethod
     def _get_observer(session: Session, data: dict[str, Any]) -> Observer:
@@ -620,13 +617,8 @@ class MyDataLoader:
     @staticmethod
     def _get_location(session: Session, data: dict[str, Any]) -> Location:
         identifier: str = data["Location ID"]
-        timestamp: dt.datetime = dt.datetime.now()
-        stmt: Select[tuple[Location]]
-        row: Row[tuple[Location]]
-        location: Location
 
         values: dict[str, Any] = {
-            "modified": timestamp,
             "identifier": identifier,
             "type": "",
             "name": data["Location"],
@@ -645,13 +637,7 @@ class MyDataLoader:
             "url": "",
         }
 
-        stmt = select(Location).where(Location.identifier == identifier)
-        if row := session.execute(stmt).first():
-            location = _update(row[0], values)
-        else:
-            location = Location(created=timestamp, **values)
-        session.add(location)
-        return location
+        return _create_or_update_location(session, identifier, values)
 
     @staticmethod
     def _get_observer(session: Session, name: str) -> Observer:
