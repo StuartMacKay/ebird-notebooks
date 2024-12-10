@@ -303,15 +303,17 @@ class BasicDatasetLoader:
 
 
 class APILoader:
-    def __init__(self, api_key, db_url):
-        self.api_key = api_key
-        self.engine = create_engine(db_url)
+    def __init__(self, api_key: str, db_url: str):
+        self.api_key: str = api_key
+        self.engine: Engine = create_engine(db_url)
 
     @staticmethod
-    def _get_observation_global_identifier(row):
+    def _get_observation_global_identifier(row: dict[str, str]) -> str:
         return f"URN:CornellLabOfOrnithology:{row['projId']}:{row['obsId']}"
 
-    def _fetch_visits(self, region, date):
+    def _fetch_visits(self, region: str, date: dt.date) -> dict:
+        visits: dict
+
         sys.stdout.write(f"Fetching visits: {region}, {date}\n")
         sys.stdout.flush()
 
@@ -320,47 +322,55 @@ class APILoader:
             sys.stdout.write("Visits made: %d\n" % len(visits))
             sys.stdout.flush()
         except (URLError, HTTPError) as err:
-            visits = None
+            visits = dict()
             sys.stdout.write(f"Visits not fetched: {region}, {date}\n")
             sys.stdout.write(f"{err}\n")
             sys.stdout.flush()
 
         return visits
 
-    def _fetch_checklist(self, identifier):
+    def _fetch_checklist(self, identifier: str) -> dict[str, Any]:
+        data: dict[str, Any]
+
         try:
             sys.stdout.write(f"Fetching checklist: {identifier}\n")
             sys.stdout.flush()
             data = get_checklist(self.api_key, identifier)
         except (URLError, HTTPError):
-            data = None
+            data = dict()
             sys.stdout.write(f"Checklist not fetched: {identifier}\n")
             sys.stdout.write("%{err}\n")
             sys.stdout.flush()
         return data
 
-    def _get_location(self, session, row):
-        identifier = row["locId"]
-        timestamp = dt.datetime.now()
-        values = {
+    @staticmethod
+    def _get_location(session: Session, data: dict[str, Any]) -> Location:
+        identifier: str = data["locId"]
+        timestamp: dt.datetime = dt.datetime.now()
+        stmt: Select[tuple[Location]]
+        row: Row[tuple[Location]]
+        location: Location
+
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": identifier,
             "type": "",
-            "name": row["name"],
-            "county": row["subnational2Name"],
-            "county_code": row["subnational2Code"],
-            "state": row["subnational1Name"],
-            "state_code": row["subnational1Code"],
-            "country": row["countryName"],
-            "country_code": row["countryCode"],
+            "name": data["name"],
+            "county": data["subnational2Name"],
+            "county_code": data["subnational2Code"],
+            "state": data["subnational1Name"],
+            "state_code": data["subnational1Code"],
+            "country": data["countryName"],
+            "country_code": data["countryCode"],
             "iba_code": "",
             "bcr_code": "",
             "usfws_code": "",
             "atlas_block": "",
-            "latitude": _decimal_value(row["latitude"]),
-            "longitude": _decimal_value(row["longitude"]),
+            "latitude": _decimal_value(data["latitude"]),
+            "longitude": _decimal_value(data["longitude"]),
             "url": "",
         }
+
         stmt = select(Location).where(Location.identifier == identifier)
         if row := session.execute(stmt).first():
             location = _update(row[0], values)
@@ -369,17 +379,23 @@ class APILoader:
         session.add(location)
         return location
 
-    def _get_observer(self, session, data):
+    @staticmethod
+    def _get_observer(session: Session, data: dict[str, Any]) -> Observer:
         # The observer's name is used as the unique identifier, even
         # though it is not necessarily unique. However this works until
         # better solution is found.
-        name = data["userDisplayName"]
-        timestamp = dt.datetime.now()
-        values = {
+        name: str = data["userDisplayName"]
+        timestamp: dt.datetime = dt.datetime.now()
+        stmt: Select[tuple[Observer]]
+        row: Row[tuple[Observer]]
+        observer: Observer
+
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": "",
             "name": name,
         }
+
         stmt = select(Observer).where(Observer.name == name)
         if row := session.execute(stmt).first():
             observer = _update(row[0], values)
@@ -389,13 +405,21 @@ class APILoader:
         return observer
 
     @staticmethod
-    def _get_species(session, obs):
-        stmt = select(Species).where(Species.code == obs["speciesCode"])
+    def _get_species(session: Session, data: dict[str, Any]) -> Species:
+        stmt: Select[tuple[Species]] = select(Species).where(
+            Species.code == data["speciesCode"]
+        )
         return session.execute(stmt).first()[0]
 
-    def _get_observation(self, session, data, checklist):
-        identifier = self._get_observation_global_identifier(data)
-        timestamp = dt.datetime.now()
+    def _get_observation(
+        self, session: Session, data: dict[str, Any], checklist: Checklist
+    ) -> Observation:
+        identifier: str = self._get_observation_global_identifier(data)
+        timestamp: dt.datetime = dt.datetime.now()
+        count: Optional[int]
+        stmt: Select[tuple[Observation]]
+        row: Row[tuple[Observation]]
+        observation: Observation
 
         if re.match(r"\d+", data["howManyStr"]):
             count = _integer_value(data["howManyStr"])
@@ -404,7 +428,7 @@ class APILoader:
         else:
             count = None
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "edited": checklist.edited,
             "identifier": identifier,
@@ -423,6 +447,7 @@ class APILoader:
             "reason": "",
             "comments": "",
         }
+
         stmt = select(Observation).where(Observation.identifier == identifier)
         if row := session.execute(stmt).first():
             observation = _update(row[0], values)
@@ -432,7 +457,7 @@ class APILoader:
         return observation
 
     @staticmethod
-    def _delete_orphans(session, checklist):
+    def _delete_orphans(session: Session, checklist: Checklist) -> None:
         # If the checklist was updated, then any observations with
         # an edited date earlier than checklist edited date must
         # have been deleted.
@@ -444,13 +469,24 @@ class APILoader:
                 sys.stdout.write(f"Observation deleted: {species} - {count}\n")
                 sys.stdout.flush()
 
-    def _get_checklist(self, session, checklist_data, location_data):
-        identifier = checklist_data["subId"]
-        timestamp = dt.datetime.now()
-        edited = dt.datetime.fromisoformat(checklist_data["lastEditedDt"])
+    def _get_checklist(
+        self,
+        session: Session,
+        checklist_data: dict[str, Any],
+        location_data: dict[str, Any],
+    ) -> Checklist:
+        identifier: str = checklist_data["subId"]
+        timestamp: dt.datetime = dt.datetime.now()
+        edited: dt.datetime = dt.datetime.fromisoformat(checklist_data["lastEditedDt"])
+        stmt: Select[tuple[Checklist]]
+        row: Row[tuple[Checklist]]
+        checklist: Checklist
 
-        date_str = checklist_data["obsDt"].split(" ", 1)[0]
-        date = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+        date_str: str = checklist_data["obsDt"].split(" ", 1)[0]
+        date: dt.date = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
+
+        time_str: str
+        time: Optional[dt.time]
 
         if checklist_data["obsTimeValid"]:
             time_str = checklist_data["obsDt"].split(" ", 1)[1]
@@ -458,13 +494,15 @@ class APILoader:
         else:
             time = None
 
+        duration: Optional[str]
+
         if "durationHrs" in checklist_data:
             duration = checklist_data["durationHrs"] * 60.0
         else:
             duration = None
 
-        distance = checklist_data.get("distKm")
-        area = checklist_data.get("areaHa")
+        distance: str = checklist_data.get("distKm")
+        area: str = checklist_data.get("areaHa")
 
         values = {
             "modified": timestamp,
@@ -507,14 +545,22 @@ class APILoader:
 
         return checklist
 
-    def load(self, region, date):
-        added = updated = unchanged = 0
+    def load(self, region: str, date: dt.date) -> None:
+        added: int = 0
+        updated: int = 0
+        unchanged: int = 0
+        total: int
 
         with Session(self.engine) as session:
             for visit in self._fetch_visits(region, date):
-                data = self._fetch_checklist(visit["subId"])
-                identifier = visit["subId"]
-                last_edited = data["lastEditedDt"]
+                if (data := self._fetch_checklist(visit["subId"])) is None:
+                    continue
+
+                identifier: str = visit["subId"]
+                last_edited: str = data["lastEditedDt"]
+                new: bool
+                modified: bool
+
                 new, modified = _get_checklist_status(session, identifier, last_edited)
                 if new or modified:
                     checklist = self._get_checklist(session, data, visit["loc"])
