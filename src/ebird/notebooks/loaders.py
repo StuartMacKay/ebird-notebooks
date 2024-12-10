@@ -585,13 +585,15 @@ class APILoader:
 
 
 class SpeciesLoader:
-    def __init__(self, api_key, db_url):
-        self.api_key = api_key
-        self.engine = create_engine(db_url)
+    def __init__(self, api_key: str, db_url: str):
+        self.api_key: str = api_key
+        self.engine: Engine = create_engine(db_url)
 
     def load(self):
         with Session(self.engine) as session:
-            timestamp = dt.datetime.now()
+            timestamp: dt.datetime = dt.datetime.now()
+            row: dict[str, Any]
+
             for row in get_taxonomy(self.api_key):
                 session.add(
                     Species(
