@@ -4,37 +4,44 @@ import decimal
 import os
 import re
 import sys
+from typing import Any, Optional, TypeVar
 from urllib.error import HTTPError, URLError
 
 from ebird.api import get_checklist, get_taxonomy, get_visits
-from sqlalchemy import create_engine, select
+from sqlalchemy import Row, Select, create_engine, select
 from sqlalchemy.orm import Session
 
 from .models import Checklist, Location, Observation, Observer, Species
 
+Model = TypeVar("Model", Checklist, Location, Observation, Observer, Species)
 
-def _boolean_value(value):
+
+def _boolean_value(value: Optional[str]) -> Optional[bool]:
     return bool(value) if value else None
 
 
-def _integer_value(value):
+def _integer_value(value: Optional[str]) -> Optional[int]:
     return int(value) if value else None
 
 
-def _decimal_value(value):
+def _decimal_value(value: Optional[str]) -> Optional[decimal.Decimal]:
     return decimal.Decimal(value) if value else None
 
 
-def _update(obj, values):
+def _update(obj: Model, values: dict[str, Any]) -> Model:
     for key, value in values.items():
         setattr(obj, key, value)
     return obj
 
 
 def _get_checklist_status(
-    session, identifier: str, last_edited: str
+    session: Session, identifier: str, last_edited: str
 ) -> tuple[bool, bool]:
-    last_edited_date = dt.datetime.fromisoformat(last_edited)
+    last_edited_date: dt.datetime = dt.datetime.fromisoformat(last_edited)
+    stmt: Select[tuple[dt.datetime]]
+    row: Row[tuple[dt.datetime]]
+    new: bool
+    modified: bool
 
     stmt = select(Checklist.edited).where(Checklist.identifier == identifier)
     if row := session.execute(stmt).first():
