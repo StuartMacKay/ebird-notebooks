@@ -1,7 +1,6 @@
 import csv
 import datetime as dt
 import decimal
-import os
 import re
 import sys
 from pathlib import Path
@@ -615,14 +614,18 @@ class SpeciesLoader:
 
 
 class MyDataLoader:
-    def __init__(self, db_url):
-        self.engine = create_engine(db_url)
+    def __init__(self, db_url: str):
+        self.engine: Engine = create_engine(db_url)
 
-    def _get_location(self, session, data):
-        identifier = data["Location ID"]
-        timestamp = dt.datetime.now()
+    @staticmethod
+    def _get_location(session: Session, data: dict[str, Any]) -> Location:
+        identifier: str = data["Location ID"]
+        timestamp: dt.datetime = dt.datetime.now()
+        stmt: Select[tuple[Location]]
+        row: Row[tuple[Location]]
+        location: Location
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": identifier,
             "type": "",
@@ -643,31 +646,39 @@ class MyDataLoader:
         }
 
         stmt = select(Location).where(Location.identifier == identifier)
-        if data := session.execute(stmt).first():
-            location = _update(data[0], values)
+        if row := session.execute(stmt).first():
+            location = _update(row[0], values)
         else:
             location = Location(created=timestamp, **values)
         session.add(location)
         return location
 
-    def _get_observer(self, session, name):
-        timestamp = dt.datetime.now()
+    @staticmethod
+    def _get_observer(session: Session, name: str) -> Observer:
+        timestamp: dt.datetime = dt.datetime.now()
+        stmt: Select[tuple[Observer]]
+        row: Row[tuple[Observer]]
+        observer: Observer
 
         values = {"modified": timestamp, "identifier": "", "name": name}
 
         stmt = select(Observer).where(Observer.name == name)
-        if data := session.execute(stmt).first():
-            observer = _update(data[0], values)
+        if row := session.execute(stmt).first():
+            observer = _update(row[0], values)
         else:
             observer = Observer(created=timestamp, **values)
         session.add(observer)
         return observer
 
-    def _get_species(self, session, data):
+    @staticmethod
+    def _get_species(session: Session, data: dict[str, Any]) -> Species:
         order = data["Taxonomic Order"]
         timestamp = dt.datetime.now()
+        stmt: Select[tuple[Species]]
+        row: Row[tuple[Species]]
+        species: Species
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": "",
             "code": "",
@@ -683,15 +694,18 @@ class MyDataLoader:
         }
 
         stmt = select(Species).where(Species.order == order)
-        if data := session.execute(stmt).first():
-            species = _update(data[0], values)
+        if row := session.execute(stmt).first():
+            species = _update(row[0], values)
         else:
             species = Species(created=timestamp, **values)
         session.add(species)
         return species
 
-    def _get_observation(self, session, data, checklist):
-        timestamp = dt.datetime.now()
+    def _get_observation(
+        self, session: Session, data: dict[str, Any], checklist: Checklist
+    ) -> Observation:
+        timestamp: dt.datetime = dt.datetime.now()
+        count: Optional[int]
 
         if re.match(r"\d+", data["Count"]):
             count = _integer_value(data["Count"])
@@ -700,7 +714,7 @@ class MyDataLoader:
         else:
             count = None
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "edited": checklist.edited,
             "identifier": "",
@@ -720,23 +734,33 @@ class MyDataLoader:
             "comments": data["Observation Details"] or "",
         }
 
-        observation = Observation(created=timestamp, **values)
+        observation: Observation = Observation(created=timestamp, **values)
         session.add(observation)
         return observation
 
-    def _get_checklist(self, session, data, observer):
-        identifier = data["Submission ID"]
-        timestamp = dt.datetime.now()
+    @staticmethod
+    def _get_checklist(
+        session: Session,
+        data: dict[str, Any],
+        location: Location,
+        observer: Observer,
+    ) -> Checklist:
+        identifier: str = data["Submission ID"]
+        timestamp: dt.datetime = dt.datetime.now()
+        stmt: Select[tuple[Checklist]]
+        row: Row[tuple[Checklist]]
+        checklist: Checklist
+        time: Optional[dt.time]
 
         if value := data["Time"]:
             time = dt.datetime.strptime(value, "%H:%M %p").time()
         else:
             time = None
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": identifier,
-            "location": self._get_location(session, data),
+            "location": location,
             "observer": observer,
             "observer_count": _integer_value(data["Number of Observers"]),
             "group": "",
@@ -755,26 +779,29 @@ class MyDataLoader:
         }
 
         stmt = select(Checklist).where(Checklist.identifier == identifier)
-        if data := session.execute(stmt).first():
-            checklist = _update(data[0], values)
+        if row := session.execute(stmt).first():
+            checklist = _update(row[0], values)
         else:
             checklist = Checklist(created=timestamp, **values)
         session.add(checklist)
         return checklist
 
-    def load(self, path, observer_name):
-        if not os.path.exists(path):
+    def load(self, path: Path, observer_name: str) -> None:
+        if not path.exists():
             raise IOError('File "%s" does not exist' % path)
 
         sys.stdout.write("Loading My eBird Data from %s\n" % path)
 
         with Session(self.engine) as session:
             with open(path) as csvfile:
-                loaded = 0
+                loaded: int = 0
                 reader = csv.DictReader(csvfile, delimiter=",")
-                observer = self._get_observer(session, observer_name)
+                observer: Observer = self._get_observer(session, observer_name)
                 for data in reader:
-                    checklist = self._get_checklist(session, data, observer)
+                    location: Location = self._get_location(session, data)
+                    checklist: Checklist = self._get_checklist(
+                        session, data, location, observer
+                    )
                     self._get_observation(session, data, checklist)
 
                     session.commit()
