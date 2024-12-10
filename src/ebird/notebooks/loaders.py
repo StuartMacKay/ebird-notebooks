@@ -4,11 +4,12 @@ import decimal
 import os
 import re
 import sys
+from pathlib import Path
 from typing import Any, Optional, TypeVar
 from urllib.error import HTTPError, URLError
 
 from ebird.api import get_checklist, get_taxonomy, get_visits
-from sqlalchemy import Row, Select, create_engine, select
+from sqlalchemy import Engine, Row, Select, create_engine, select
 from sqlalchemy.orm import Session
 
 from .models import Checklist, Location, Observation, Observer, Species
@@ -58,30 +59,34 @@ def _get_checklist_status(
 
 
 class BasicDatasetLoader:
-    def __init__(self, db_url):
-        self.engine = create_engine(db_url)
+    def __init__(self, db_url: str) -> None:
+        self.engine: Engine = create_engine(db_url)
 
-    def _get_location(self, session, row):
-        identifier = row["LOCALITY ID"]
-        timestamp = dt.datetime.now()
+    @staticmethod
+    def _get_location(session: Session, data: dict[str, str]) -> Location:
+        identifier: str = data["LOCALITY ID"]
+        timestamp: dt.datetime = dt.datetime.now()
+        stmt: Select[tuple[Location]]
+        row: Row[tuple[Location]]
+        location: Location
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": identifier,
-            "type": row["LOCALITY TYPE"],
-            "name": row["LOCALITY"],
-            "county": row["COUNTY"],
-            "county_code": row["COUNTY CODE"],
-            "state": row["STATE"],
-            "state_code": row["STATE CODE"],
-            "country": row["COUNTRY"],
-            "country_code": row["COUNTRY CODE"],
-            "latitude": _decimal_value(row["LATITUDE"]),
-            "longitude": _decimal_value(row["LONGITUDE"]),
-            "iba_code": row["IBA CODE"],
-            "bcr_code": row["BCR CODE"],
-            "usfws_code": row["USFWS CODE"],
-            "atlas_block": row["ATLAS BLOCK"],
+            "type": data["LOCALITY TYPE"],
+            "name": data["LOCALITY"],
+            "county": data["COUNTY"],
+            "county_code": data["COUNTY CODE"],
+            "state": data["STATE"],
+            "state_code": data["STATE CODE"],
+            "country": data["COUNTRY"],
+            "country_code": data["COUNTRY CODE"],
+            "latitude": _decimal_value(data["LATITUDE"]),
+            "longitude": _decimal_value(data["LONGITUDE"]),
+            "iba_code": data["IBA CODE"],
+            "bcr_code": data["BCR CODE"],
+            "usfws_code": data["USFWS CODE"],
+            "atlas_block": data["ATLAS BLOCK"],
             "url": "",
         }
 
@@ -93,11 +98,19 @@ class BasicDatasetLoader:
         session.add(location)
         return location
 
-    def _get_observer(self, session, row):
-        identifier = row["OBSERVER ID"]
-        timestamp = dt.datetime.now()
+    @staticmethod
+    def _get_observer(session: Session, data: dict[str, str]) -> Observer:
+        identifier: str = data["OBSERVER ID"]
+        timestamp: dt.datetime = dt.datetime.now()
+        stmt: Select[tuple[Observer]]
+        row: Row[tuple[Observer]]
+        observer: Observer
 
-        values = {"identifier": identifier, "modified": timestamp, "name": ""}
+        values: dict[str, Any] = {
+            "identifier": identifier,
+            "modified": timestamp,
+            "name": "",
+        }
 
         stmt = select(Observer).where(Observer.identifier == identifier)
         if row := session.execute(stmt).first():
@@ -107,23 +120,27 @@ class BasicDatasetLoader:
         session.add(observer)
         return observer
 
-    def _get_species(self, session, row):
-        identifier = row["TAXON CONCEPT ID"]
+    @staticmethod
+    def _get_species(session: Session, data: dict[str, str]) -> Species:
+        identifier = data["TAXON CONCEPT ID"]
         timestamp = dt.datetime.now()
+        stmt: Select[tuple[Species]]
+        row: Row[tuple[Species]]
+        species: Species
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": identifier,
             "code": "",
-            "order": row["TAXONOMIC ORDER"],
-            "category": row["CATEGORY"],
-            "common_name": row["COMMON NAME"],
-            "scientific_name": row["SCIENTIFIC NAME"],
+            "order": data["TAXONOMIC ORDER"],
+            "category": data["CATEGORY"],
+            "common_name": data["COMMON NAME"],
+            "scientific_name": data["SCIENTIFIC NAME"],
             "local_name": "",
-            "subspecies_common_name": row["SUBSPECIES COMMON NAME"],
-            "subspecies_scientific_name": row["SUBSPECIES SCIENTIFIC NAME"],
+            "subspecies_common_name": data["SUBSPECIES COMMON NAME"],
+            "subspecies_scientific_name": data["SUBSPECIES SCIENTIFIC NAME"],
             "subspecies_local_name": "",
-            "exotic_code": row["EXOTIC CODE"],
+            "exotic_code": data["EXOTIC CODE"],
         }
 
         stmt = select(Species).where(Species.identifier == identifier)
@@ -134,35 +151,42 @@ class BasicDatasetLoader:
         session.add(species)
         return species
 
-    def _get_observation(self, session, row, checklist):
-        identifier = row["GLOBAL UNIQUE IDENTIFIER"]
+    @staticmethod
+    def _get_observation(
+        session: Session, data: dict[str, str], checklist: Checklist, species: Species
+    ) -> Observation:
+        identifier = data["GLOBAL UNIQUE IDENTIFIER"]
         timestamp = dt.datetime.now()
+        count: Optional[int]
+        stmt: Select[tuple[Observation]]
+        row: Row[tuple[Observation]]
+        observation: Observation
 
-        if re.match(r"\d+", row["OBSERVATION COUNT"]):
-            count = _integer_value(row["OBSERVATION COUNT"])
+        if re.match(r"\d+", data["OBSERVATION COUNT"]):
+            count = _integer_value(data["OBSERVATION COUNT"])
             if count == 0:
                 count = None
         else:
             count = None
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "edited": checklist.edited,
             "identifier": identifier,
             "checklist": checklist,
             "location": checklist.location,
             "observer": checklist.observer,
-            "species": self._get_species(session, row),
+            "species": species,
             "count": count,
-            "breeding_code": row["BREEDING CODE"],
-            "breeding_category": row["BREEDING CATEGORY"],
-            "behavior_code": row["BEHAVIOR CODE"],
-            "age_sex": row["AGE/SEX"],
-            "media": _boolean_value(row["HAS MEDIA"]),
-            "approved": _boolean_value(row["APPROVED"]),
-            "reviewed": _boolean_value(row["REVIEWED"]),
-            "reason": row["REASON"],
-            "comments": row["SPECIES COMMENTS"],
+            "breeding_code": data["BREEDING CODE"],
+            "breeding_category": data["BREEDING CATEGORY"],
+            "behavior_code": data["BEHAVIOR CODE"],
+            "age_sex": data["AGE/SEX"],
+            "media": _boolean_value(data["HAS MEDIA"]),
+            "approved": _boolean_value(data["APPROVED"]),
+            "reviewed": _boolean_value(data["REVIEWED"]),
+            "reason": data["REASON"],
+            "comments": data["SPECIES COMMENTS"],
         }
 
         stmt = select(Observation).where(Observation.identifier == identifier)
@@ -176,17 +200,25 @@ class BasicDatasetLoader:
             session.add(observation)
         return observation
 
-    def _get_checklist(self, session, row, location, observer):
-        identifier = row["SAMPLING EVENT IDENTIFIER"]
-        timestamp = dt.datetime.now()
-        edited = dt.datetime.fromisoformat(row["LAST EDITED DATE"])
+    @staticmethod
+    def _get_checklist(
+        session: Session,
+        row: dict[str, str],
+        location: Location,
+        observer: Observer,
+    ) -> Checklist:
+        identifier: str = row["SAMPLING EVENT IDENTIFIER"]
+        timestamp: dt.datetime = dt.datetime.now()
+        edited: dt.datetime = dt.datetime.fromisoformat(row["LAST EDITED DATE"])
+        time: Optional[dt.time]
+        checklist: Checklist
 
         if value := row["TIME OBSERVATIONS STARTED"]:
             time = dt.datetime.strptime(value, "%H:%M:%S").time()
         else:
             time = None
 
-        values = {
+        values: dict[str, Any] = {
             "modified": timestamp,
             "identifier": identifier,
             "edited": edited,
@@ -215,31 +247,38 @@ class BasicDatasetLoader:
         session.add(checklist)
         return checklist
 
-    def load(self, path):
-        if not os.path.exists(path):
+    def load(self, path: Path) -> None:
+        if not path.exists():
             raise IOError('File "%s" does not exist' % path)
 
         sys.stdout.write("Loading eBird Basic Dataset from %s\n" % path)
 
         with Session(self.engine) as session:
             with open(path) as csvfile:
-                added = updated = unchanged = loaded = 0
+                added: int = 0
+                updated: int = 0
+                unchanged: int = 0
+                loaded: int = 0
+                new: bool
+                modified: bool
+
                 reader = csv.DictReader(csvfile, delimiter="\t")
                 for row in reader:
-                    identifier = row["GLOBAL UNIQUE IDENTIFIER"]
-                    last_edited = row["LAST EDITED DATE"]
+                    identifier: str = row["GLOBAL UNIQUE IDENTIFIER"]
+                    last_edited: str = row["LAST EDITED DATE"]
 
                     new, modified = _get_checklist_status(
                         session, identifier, last_edited
                     )
 
                     if new or modified:
-                        location = self._get_location(session, row)
-                        observer = self._get_observer(session, row)
-                        checklist = self._get_checklist(
+                        location: Location = self._get_location(session, row)
+                        observer: Observer = self._get_observer(session, row)
+                        checklist: Checklist = self._get_checklist(
                             session, row, location, observer
                         )
-                        self._get_observation(session, row, checklist)
+                        species: Species = self._get_species(session, row)
+                        self._get_observation(session, row, checklist, species)
 
                         session.commit()
 
