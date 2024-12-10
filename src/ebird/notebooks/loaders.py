@@ -76,6 +76,25 @@ def _create_or_update_location(
     return location
 
 
+def _create_or_update_checklist(
+    session: Session, identifier: str, values: dict[str, Any]
+) -> Checklist:
+    timestamp: dt.datetime = dt.datetime.now()
+    row: Row[tuple[Checklist]]
+    checklist: Checklist
+
+    stmt: Select[tuple[Checklist]] = select(Checklist).where(
+        Checklist.identifier == identifier
+    )
+    if row := session.execute(stmt).first():
+        checklist = _update(row[0], values)
+        checklist.modified = timestamp
+    else:
+        checklist = Checklist(created=timestamp, modified=timestamp, **values)
+    session.add(checklist)
+    return checklist
+
+
 class BasicDatasetLoader:
     def __init__(self, db_url: str) -> None:
         self.engine: Engine = create_engine(db_url)
@@ -215,10 +234,8 @@ class BasicDatasetLoader:
         observer: Observer,
     ) -> Checklist:
         identifier: str = row["SAMPLING EVENT IDENTIFIER"]
-        timestamp: dt.datetime = dt.datetime.now()
         edited: dt.datetime = dt.datetime.fromisoformat(row["LAST EDITED DATE"])
         time: Optional[dt.time]
-        checklist: Checklist
 
         if value := row["TIME OBSERVATIONS STARTED"]:
             time = dt.datetime.strptime(value, "%H:%M:%S").time()
@@ -226,7 +243,6 @@ class BasicDatasetLoader:
             time = None
 
         values: dict[str, Any] = {
-            "modified": timestamp,
             "identifier": identifier,
             "edited": edited,
             "location": location,
@@ -246,13 +262,7 @@ class BasicDatasetLoader:
             "url": "",
         }
 
-        stmt = select(Checklist).where(Checklist.identifier == identifier)
-        if row := session.execute(stmt).first():
-            checklist = _update(row[0], values)
-        else:
-            checklist = Checklist(created=timestamp, **values)
-        session.add(checklist)
-        return checklist
+        return _create_or_update_checklist(session, identifier, values)
 
     def load(self, path: Path) -> None:
         if not path.exists():
@@ -472,10 +482,7 @@ class APILoader:
         location_data: dict[str, Any],
     ) -> Checklist:
         identifier: str = checklist_data["subId"]
-        timestamp: dt.datetime = dt.datetime.now()
         edited: dt.datetime = dt.datetime.fromisoformat(checklist_data["lastEditedDt"])
-        stmt: Select[tuple[Checklist]]
-        row: Row[tuple[Checklist]]
         checklist: Checklist
 
         date_str: str = checklist_data["obsDt"].split(" ", 1)[0]
@@ -501,7 +508,6 @@ class APILoader:
         area: str = checklist_data.get("areaHa")
 
         values = {
-            "modified": timestamp,
             "identifier": identifier,
             "edited": edited,
             "location": self._get_location(session, location_data),
@@ -522,12 +528,7 @@ class APILoader:
             "url": "",
         }
 
-        stmt = select(Checklist).where(Checklist.identifier == identifier)
-        if row := session.execute(stmt).first():
-            checklist = _update(row[0], values)
-        else:
-            checklist = Checklist(created=timestamp, **values)
-        session.add(checklist)
+        checklist = _create_or_update_checklist(session, identifier, values)
 
         for observation_data in checklist_data["obs"]:
             try:
@@ -732,10 +733,6 @@ class MyDataLoader:
         observer: Observer,
     ) -> Checklist:
         identifier: str = data["Submission ID"]
-        timestamp: dt.datetime = dt.datetime.now()
-        stmt: Select[tuple[Checklist]]
-        row: Row[tuple[Checklist]]
-        checklist: Checklist
         time: Optional[dt.time]
 
         if value := data["Time"]:
@@ -744,7 +741,6 @@ class MyDataLoader:
             time = None
 
         values: dict[str, Any] = {
-            "modified": timestamp,
             "identifier": identifier,
             "location": location,
             "observer": observer,
@@ -764,13 +760,7 @@ class MyDataLoader:
             "url": "",
         }
 
-        stmt = select(Checklist).where(Checklist.identifier == identifier)
-        if row := session.execute(stmt).first():
-            checklist = _update(row[0], values)
-        else:
-            checklist = Checklist(created=timestamp, **values)
-        session.add(checklist)
-        return checklist
+        return _create_or_update_checklist(session, identifier, values)
 
     def load(self, path: Path, observer_name: str) -> None:
         if not path.exists():
