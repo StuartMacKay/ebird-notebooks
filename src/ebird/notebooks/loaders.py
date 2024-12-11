@@ -76,6 +76,25 @@ def _create_or_update_location(
     return location
 
 
+def _create_or_update_observer(
+    session: Session, identifier: str, values: dict[str, Any]
+) -> Observer:
+    timestamp: dt.datetime = dt.datetime.now()
+    row: Row[tuple[Observer]]
+    observer: Observer
+
+    stmt: Select[tuple[Observer]] = select(Observer).where(
+        Observer.identifier == identifier
+    )
+    if row := session.execute(stmt).first():
+        observer = _update(row[0], values)
+        observer.modified = timestamp
+    else:
+        observer = Observer(created=timestamp, modified=timestamp, **values)
+    session.add(observer)
+    return observer
+
+
 def _create_or_update_checklist(
     session: Session, identifier: str, values: dict[str, Any]
 ) -> Checklist:
@@ -127,24 +146,13 @@ class BasicDatasetLoader:
     @staticmethod
     def _get_observer(session: Session, data: dict[str, str]) -> Observer:
         identifier: str = data["OBSERVER ID"]
-        timestamp: dt.datetime = dt.datetime.now()
-        stmt: Select[tuple[Observer]]
-        row: Row[tuple[Observer]]
-        observer: Observer
 
         values: dict[str, Any] = {
             "identifier": identifier,
-            "modified": timestamp,
             "name": "",
         }
 
-        stmt = select(Observer).where(Observer.identifier == identifier)
-        if row := session.execute(stmt).first():
-            observer = _update(row[0], values)
-        else:
-            observer = Observer(created=timestamp, **values)
-        session.add(observer)
-        return observer
+        return _create_or_update_observer(session, identifier, values)
 
     @staticmethod
     def _get_species(session: Session, data: dict[str, str]) -> Species:
