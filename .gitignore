@@ -21,3 +21,6 @@ __pycache__/
 *.sqlite3
 *.csv
 build/
+
+# Sample file for the eBird Basic Dataset
+!data/downloads/ebird_basic_dataset_sample.csv

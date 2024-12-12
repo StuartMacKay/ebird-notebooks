@@ -1,69 +1,51 @@
 # eBird Notebooks
 
 eBird Notebooks is collection of Jupyter notebooks for analysing data
-from the eBird basic Dataset or downloaded using the eBird API.
+from the eBird basic Dataset or downloaded using the eBird API. The
+project can process records from three different sources:
+
+1. The eBird Basic Dataset
+2. Records from "Download My Data" in your eBird account
+3. Records downloaded from the eBird API 2.0
 
 ## Getting Started
 
 Download and unzip the code, or click on the "Use this template" button
 to create a new repository.
 
+The project uses [uv](https://docs.astral.sh/uv/) to manage the project, but you can also
+use pip, if you like. Instructions for installing the project using
+Conda will be added later.
+
 ```shell
 cd ebird-notebooks
 ```
 
-There are two options for installing the project:
+uv works exactly like pip, except it's faster. A lot faster.
 
-1. Using pip
-2. Using [uv](https://docs.astral.sh/uv/)
-
-Instructions for installing the project using Conda will be added later.
-
-### Install using pip
-
-Create a virtual environment and activate it:
-```shell
-python3.12 -m venv .venv
-source .venv/bin/activate
-```
-The virtualenv was created using python 3.12 but any recent python
-version will do.
-
-Install the requirements:
-```shell
-pip install -r requirements.txt
-```
-Now you can run the notebooks.
-
-
-### Install using uv
-Alternatively you can set up the project using uv, which works exactly
-like pip, except it's faster. A lot faster.
-
-If you are new to uv, you will probably have to install a python version first:
+If you are new to uv, you will probably have to install a python
+version first:
 ```shell
 uv python install 3.12
 ```
 
+Now create the virtual environment and activate it:
 ```shell
 uv venv
 source .venv/bin/activate
 ```
-The virtualenv was created using python 3.12 but any recent python version
-will do. uv will use the python version from the file,`.python-version`.
+The project file, pyproject.toml lists python 3.12 or late, but any recent
+python version will do.
+
+If you install [direnv](https://direnv.net/), you can activate the virtualenv
+automatically when you change to the project directory.
 
 Next install the project requirements:
 ```shell
 uv sync
-uv pip install -e .
 ```
-The first command installs the project dependencies. The second, installs
-the code in the src directory so you can easily import it into a notebook.
 
 ## Running the notebooks
-
-If you install [direnv](https://direnv.net/), you can activate the virtualenv
-automatically when you change to the project directory.
 
 Create a copy of the file containing the project's environment variables,:
 ```shell
@@ -80,34 +62,36 @@ jupyter lab
 
 ### Set up the database
 
-There are two notebooks, [working_with_ebird_api.ipynb](notebooks/working_with_ebird_api.ipynb),
-and [working_with_ebird_basic_dataset.ipynb](notebooks/working_with_ebird_basic_dataset.ipynb),
+There are three notebooks, one for each of the data sources:
+* [working_with_ebird_basic_dataset.ipynb](notebooks/working_with_ebird_basic_dataset.ipynb)
+* [working_with_my_ebird_data.ipynb](notebooks/working_with_my_ebird_data.ipynb)
+* [working_with_ebird_api.ipynb](notebooks/working_with_ebird_api.ipynb)
 which take you through the steps of creating the sqlite3 database and
 loading the first set of observations. If you are going to use the eBird
 Basic Dataset, then there is a copy of the sample data provided by eBird
 in the `data/downloads/`directory.
 
-Separate databases are used for the eBird Basic Dataset and the eBird API.
-The data from the API is a subset of the Basic Dataset, but is less accurate
-in three ways:
+Separate databases are used for each. The data from My eBIrd Data, and the
+API are a subset of the Basic Dataset, but they are less accurate:
 
 1. Not all the records will have been reviewed
 2. Observers are identified by name only
-3. Observations are identified by species
 
 Checklists are updated all the time. Sometimes records are only reviewed,
 years after the initial submission. So some fuzziness, particularly with
 unusual observations, or rare birds will always be subject to change.
 
-The second and third points are more serious. If there is more than one
-observer with the same name, then all the checklists will belong to the
-same person. Also, each observation is identified by a species code,
-e.g. horlar1, (Horned Lark). That means if a species changes, because of
-a mis-identification, the original record will remain. The eBird Basic
-Dataset does not have this problem as an observation has a unique code,
-so the species can be changed at any time. You could consider this to be
-a bug, however the solution is to continually download all the checklists
-to see if the number of species has changed. That's simply not practical.
+The second point more serious, if you use data from the API. If there is
+more than one observer with the same name, then all the checklists will
+belong to the same person.
+
+You can load data periodically using the API - there is a script included
+so you can do daily downloads using a scheduler such as cron See the
+"[working_with_ebird_basic_dataset.ipynb](notebooks/working_with_ebird_basic_dataset.ipynb)"
+for more details.
+
+If you want to load My eBird Data you will need to delete all existing
+records, otherwise you will end up with duplicate records.
 
 For these reasons, observations from the eBird API should only be used
 to get the latest information, which is subject to change. For more
