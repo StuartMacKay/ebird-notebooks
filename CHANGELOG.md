@@ -9,3 +9,5 @@ This project adheres to [PEP440](https://www.python.org/dev/peps/pep-0440/)
 and by implication, [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+Initial release with database models, example notebooks on how to
+download records from eBird and load them into the database.
