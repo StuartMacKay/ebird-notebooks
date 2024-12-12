@@ -33,6 +33,7 @@ classifiers = [
 [tool.uv]
 dev-dependencies = [
     "bump-my-version>=0.28.1",
+    "nbqa>=1.9.1",
     "pre-commit>=4.0.1",
     "ruff>=0.8.0",
     "rust-just>=1.38.0",
