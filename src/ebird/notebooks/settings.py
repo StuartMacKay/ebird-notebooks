@@ -2,10 +2,13 @@
 Settings for the notebooks.
 """
 
+import datetime as dt
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+_today = dt.date.today()
 
 # The root directory of the project.
 ROOT_DIR: Path = Path(__file__).parent.parent.parent.parent.absolute()
@@ -28,3 +31,7 @@ API_REGIONS: list[str] = [
 ]
 # The number of days to fetch checklists for.
 API_PAST_DAYS: int = int(os.getenv("API_PAST_DAYS", "5"))
+# The default dates for fetching checklists. API_PAST_DAYS == 0 returns an empty list.
+API_PAST_DATES: list[dt.date] = [
+    _today - dt.timedelta(days=offset) for offset in range(API_PAST_DAYS)
+]
