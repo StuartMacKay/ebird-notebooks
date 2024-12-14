@@ -22,7 +22,9 @@ DATABASE_DIR: Path = DATA_DIR.joinpath("databases")
 load_dotenv(DOTENV_FILE)
 # The key needed to access the eBird API.
 API_KEY: str = os.getenv("API_KEY")
-# The regions for which to load observations for.
-API_REGIONS: str = os.getenv("API_REGIONS")
+# The regions for fetching checklists.
+API_REGIONS: list[str] = [
+    region.strip() for region in os.getenv("API_REGIONS", "").split(",") if region
+]
 # The number of days to fetch checklists for.
 API_PAST_DAYS: int = int(os.getenv("API_PAST_DAYS", "5"))
