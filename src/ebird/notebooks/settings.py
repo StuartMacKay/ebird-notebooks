@@ -37,3 +37,5 @@ API_PAST_DATES: list[dt.date] = [
 ]
 # The default name for the database where eBird API records are saved
 API_DB_NAME: str = os.getenv("API_DB_NAME", "api_checklists")
+# The default URL for the eBird API database
+API_DB_URL: str = f"sqlite+pysqlite:///{DATABASE_DIR}/{API_DB_NAME}.sqlite3"

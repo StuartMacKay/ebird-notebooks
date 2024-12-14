@@ -7,13 +7,7 @@ scheduler such as cron.
 
 from ebird.notebooks import loaders, settings
 
-db_dir = settings.DATABASE_DIR
-db_name = settings.API_DB_NAME
-db_url = f"sqlite+pysqlite:///{db_dir}/{db_name}.sqlite3"
-
-api_key = settings.API_KEY
-
-loader = loaders.APILoader(api_key, db_url)
+loader = loaders.APILoader(settings.API_KEY, settings.API_DB_URL)
 
 for area in settings.API_REGIONS:
     for date in settings.API_PAST_DATES:
