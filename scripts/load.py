@@ -8,7 +8,7 @@ scheduler such as cron.
 from ebird.notebooks import loaders, settings
 
 db_dir = settings.DATABASE_DIR
-db_name = "api_checklists"
+db_name = settings.API_DB_NAME
 db_url = f"sqlite+pysqlite:///{db_dir}/{db_name}.sqlite3"
 
 api_key = settings.API_KEY
