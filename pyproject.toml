@@ -33,8 +33,10 @@ classifiers = [
 [tool.uv]
 dev-dependencies = [
     "bump-my-version>=0.28.1",
+    "factory-boy>=3.3.1",
     "nbqa>=1.9.1",
     "pre-commit>=4.0.1",
+    "pytest>=8.3.4",
     "ruff>=0.8.0",
     "rust-just>=1.38.0",
 ]
@@ -78,3 +80,11 @@ filename = "CITATION.cff"
 search = "^date-released: \\d{{4}}-\\d{{2}}-\\d{{2}}$"
 replace = "date-released: {now:%Y-%m-%d}"
 regex = true
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
+testpaths = [
+    "tests"
+]

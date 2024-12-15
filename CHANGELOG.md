@@ -9,7 +9,8 @@ This project adheres to [PEP440](https://www.python.org/dev/peps/pep-0440/)
 and by implication, [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
-Updated settings to simplify loader script and eBird API notebook.
+- Added a helper class, ChecklistQuery for fetching Checklists.
+- Updated settings to simplify loader script and eBird API notebook.
 
 ## [0.0.1] - 2024-12-12
 Initial release with database models, example notebooks on how to
