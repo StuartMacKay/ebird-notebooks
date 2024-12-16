@@ -35,7 +35,8 @@ API_PAST_DAYS: int = int(os.getenv("API_PAST_DAYS", "5"))
 API_PAST_DATES: list[dt.date] = [
     _today - dt.timedelta(days=offset) for offset in range(API_PAST_DAYS)
 ]
-# The default name for the database where eBird API records are saved
-API_DB_NAME: str = os.getenv("API_DB_NAME", "api_checklists")
+
+# The name of the database where records are saved
+DB_NAME: str = os.getenv("NAME", "checklists")
 # The default URL for the eBird API database
-API_DB_URL: str = f"sqlite+pysqlite:///{DATABASE_DIR}/{API_DB_NAME}.sqlite3"
+API_DB_URL: str = f"sqlite+pysqlite:///{DATABASE_DIR}/{DB_NAME}.sqlite3"
