@@ -4,7 +4,8 @@ import string
 
 import factory
 
-from ebird.notebooks.models import Checklist, Location, Observer, Species
+from ebird.notebooks.models import (Checklist, Location, Observation, Observer,
+                                    Species)
 
 PROJECTS = [
     "EBIRD",
@@ -15,6 +16,14 @@ PROTOCOLS = {
     "P22": "Traveling",
 }
 
+SPECIES = {
+    "Canada goose": "(Branta canadensis)",
+    "Mallard": "Anas platyrhynchos",
+    "Rock Pigeon (Feral Pigeon)": "Columba livia (Feral Pigeon)",
+    "Common Starling": "Sturnus vulgaris",
+    "House Sparrow": "Passer domesticus",
+}
+
 
 def random_key(values):
     return random.choice(list(values.keys()))
@@ -22,6 +31,14 @@ def random_key(values):
 
 def random_code(length: int, prefix: str = ""):
     return prefix + "".join(random.choices(string.digits, k=length))
+
+
+def random_hex_code(length: int, prefix: str = ""):
+    return prefix + "".join(random.choices(string.hexdigits, k=length))
+
+
+def random_lowercase(length: int, prefix: str = ""):
+    return prefix + "".join(random.choices(string.ascii_lowercase, k=length))
 
 
 def random_uppercase(length: int, prefix: str = ""):
@@ -91,6 +108,16 @@ class SpeciesFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     created = factory.LazyFunction(dt.datetime.now)
     modified = factory.LazyFunction(dt.datetime.now)
+    identifier = factory.LazyAttribute(lambda _: random_hex_code(8, "avibase-"))
+    code = factory.LazyAttribute(lambda _: random_lowercase(6))
+    category = ""
+    common_name = factory.LazyAttribute(lambda _: random_key(SPECIES))
+    scientific_name = factory.LazyAttribute(lambda obj: SPECIES[obj.common_name])
+    local_name = ""
+    subspecies_common_name = ""
+    subspecies_scientific_name = ""
+    subspecies_local_name = ""
+    exotic_code = ""
 
 
 class ChecklistFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -111,3 +138,23 @@ class ChecklistFactory(factory.alchemy.SQLAlchemyModelFactory):
     complete = True
     comments = ""
     url = factory.LazyAttribute(lambda o: checklist_url(o.identifier))
+
+
+class ObservationFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta:
+        model = Observation
+
+    created = factory.LazyFunction(dt.datetime.now)
+    modified = factory.LazyFunction(dt.datetime.now)
+    identifier = factory.LazyAttribute(lambda _: random_code(10, "OBS"))
+    species = factory.SubFactory(SpeciesFactory)
+    checklist = factory.SubFactory(ChecklistFactory)
+    location = factory.SubFactory(LocationFactory)
+    observer = factory.SubFactory(ObserverFactory)
+    count = factory.Faker("pyint")
+    breeding_code = ""
+    breeding_category = ""
+    behavior_code = ""
+    age_sex = ""
+    reason = ""
+    comments = ""

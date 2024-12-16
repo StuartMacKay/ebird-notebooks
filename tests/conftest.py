@@ -2,7 +2,9 @@ import pytest
 from sqlalchemy import create_engine, orm
 
 from ebird.notebooks.models import Base
-from tests.factories import ChecklistFactory, LocationFactory, ObserverFactory
+from tests.factories import (ChecklistFactory, LocationFactory,
+                             ObservationFactory, ObserverFactory,
+                             SpeciesFactory)
 
 
 @pytest.fixture(scope="session")
@@ -36,3 +38,5 @@ def factories(session):
     ChecklistFactory._meta.sqlalchemy_session = session  # noqa
     LocationFactory._meta.sqlalchemy_session = session  # noqa
     ObserverFactory._meta.sqlalchemy_session = session  # noqa
+    ObservationFactory._meta.sqlalchemy_session = session  # noqa
+    SpeciesFactory._meta.sqlalchemy_session = session  # noqa

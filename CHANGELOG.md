@@ -10,6 +10,7 @@ and by implication, [Semantic Versioning](http://semver.org/).
 
 ## [Unrelased]
 - Renamed 'working with the database' notebook to 'working with checklists'.
+- Added a helper class, ObservationQuery for fetching Observations.
 
 ## [0.0.2] - 2024-12-15
 - Added a helper class, ChecklistQuery for fetching Checklists.
