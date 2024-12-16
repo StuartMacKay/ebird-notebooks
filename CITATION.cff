@@ -4,7 +4,7 @@ abstract:
 authors:
   - name: Stuart MacKay
 cff-version: 1.2.0
-date-released: 2024-12-15
+date-released: 2024-12-16
 keywords:
   - eBird
   - checklists
@@ -16,4 +16,4 @@ license: MIT License
 message: If you use this software, please cite it using the metadata from this file.
 repository-code: "https://github.com/StuartMacKay/ebird-notebooks"
 title: eBird Notebooks
-version: 0.0.2
+version: 0.0.3
