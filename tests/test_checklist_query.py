@@ -15,7 +15,7 @@ def checklist(session):
 
 
 def test_select__entities_updated(session):
-    query = ChecklistQuery(session)
+    query = ChecklistQuery(session).clear()
     model = Checklist
     query.select(Checklist)
 
@@ -23,7 +23,7 @@ def test_select__entities_updated(session):
 
 
 def test_select_multiple__entities_updated(session):
-    query = ChecklistQuery(session)
+    query = ChecklistQuery(session).clear()
     query.select(Checklist, Location)
 
     assert Checklist in query.entities
@@ -31,7 +31,7 @@ def test_select_multiple__entities_updated(session):
 
 
 def test_select_repeated__entities_updated(session):
-    query = ChecklistQuery(session)
+    query = ChecklistQuery(session).clear()
     query.select(Checklist).select(Location)
 
     assert Checklist in query.entities
@@ -39,7 +39,7 @@ def test_select_repeated__entities_updated(session):
 
 
 def test_where__clauses_updated(session):
-    query = ChecklistQuery(session)
+    query = ChecklistQuery(session).clear()
     clause = Checklist.id == 1
     query.where(clause)
 
@@ -47,7 +47,7 @@ def test_where__clauses_updated(session):
 
 
 def test_join__joins_updated(session):
-    query = ChecklistQuery(session)
+    query = ChecklistQuery(session).clear()
     model = Checklist
     query.join(Checklist)
 
@@ -55,7 +55,7 @@ def test_join__joins_updated(session):
 
 
 def test_order__orders_updated(session):
-    query = ChecklistQuery(session)
+    query = ChecklistQuery(session).clear()
     column = Checklist.id
     query.order(column)
 
@@ -64,7 +64,6 @@ def test_order__orders_updated(session):
 
 def test_clear__all_attributes_cleared(session):
     query = ChecklistQuery(session)
-    query.select(Checklist)
     query.where(Checklist.id == 1)
     query.order(Checklist.id)
     query.clear()
