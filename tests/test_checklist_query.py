@@ -20,7 +20,6 @@ def test_select__entities_updated(session):
     query.select(Checklist)
 
     assert model in query.entities
-    assert model in query.joins
 
 
 def test_select_multiple__entities_updated(session):
@@ -37,13 +36,6 @@ def test_select_repeated__entities_updated(session):
 
     assert Checklist in query.entities
     assert Location in query.entities
-
-
-def test_select_model__joins_updated(session):
-    query = ChecklistQuery(session)
-    query.select(Checklist, Location)
-
-    assert Checklist in query.joins
 
 
 def test_where__clauses_updated(session):

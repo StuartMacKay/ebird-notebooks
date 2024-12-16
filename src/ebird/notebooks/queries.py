@@ -2,8 +2,7 @@ import datetime as dt
 import re
 
 from dateutil import relativedelta
-from sqlalchemy import and_, exc, func, select
-from sqlalchemy.orm.util import class_mapper
+from sqlalchemy import and_, func, select
 
 from .models import Checklist, Location, Observer
 
@@ -17,13 +16,7 @@ class ChecklistQuery:
         self.orders = [Checklist.date, Checklist.time]
 
     def select(self, *entities):
-        for entity in entities:
-            try:
-                class_mapper(entity)
-                self.joins.append(entity)
-            except exc.ArgumentError:
-                pass
-            self.entities.append(entity)
+        self.entities.extend(entities)
         return self
 
     def where(self, *args):
