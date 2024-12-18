@@ -7,7 +7,7 @@ from sqlalchemy import and_, func, select
 from .models import Checklist, Location, Observation, Observer, Species
 
 
-class ChecklistQuery:
+class Checklists:
     def __init__(self, session):
         self.session = session
         self.entities = [Checklist, Location, Observer]
@@ -53,6 +53,15 @@ class ChecklistQuery:
         for clause in self.clauses:
             statement = statement.where(clause)
         return self.session.scalar(statement)
+
+    def latest(self):
+        statement = (
+            select(Checklist, Location, Observer)
+            .join(Location)
+            .join(Observer)
+            .order_by(Checklist.date.desc(), Checklist.time.desc())
+        )
+        return self.session.execute(statement).first()
 
     def for_country(self, value):
         if re.match(r"[A-Z]{2,3}", value):
@@ -100,7 +109,7 @@ class ChecklistQuery:
         return self
 
 
-class ObservationQuery:
+class Observations:
     def __init__(self, session):
         self.session = session
         self.entities = [Observation, Checklist, Species, Observer, Location]
@@ -151,6 +160,16 @@ class ObservationQuery:
         for clause in self.clauses:
             statement = statement.where(clause)
         return self.session.scalar(statement)
+
+    def latest(self):
+        statement = (
+            select(Observation, Checklist, Location, Observer)
+            .join(Checklist.identifier)
+            .join(Location.identifier)
+            .join(Observer.identifier)
+            .order_by(Checklist.date.desc(), Checklist.time.desc())
+        )
+        return self.session.execute(statement).first()
 
     def for_country(self, value):
         if re.match(r"[A-Z]{2,3}", value):
