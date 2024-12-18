@@ -112,7 +112,7 @@ class Checklists:
 class Observations:
     def __init__(self, session):
         self.session = session
-        self.entities = [Observation, Checklist, Species, Observer, Location]
+        self.entities = [Observation, Species, Checklist, Observer, Location]
         self.joins = [
             Observation.species,
             Observation.checklist,
