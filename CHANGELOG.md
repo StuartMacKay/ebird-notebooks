@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project adheres to [PEP440](https://www.python.org/dev/peps/pep-0440/)
 and by implication, [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.0.4] - 2024-12-18
 - Updated environment variables so connections can be made to a database server.
 - Updated notebooks for working with checklists and observations to display data in HTML tables.
 
