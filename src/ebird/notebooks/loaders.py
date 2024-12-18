@@ -174,7 +174,7 @@ class BasicDatasetLoader:
             "exotic_code": data["EXOTIC CODE"],
         }
 
-        stmt = select(Species).where(Species.identifier == identifier)
+        stmt = select(Species).where(Species.identifier == identifier)  # noqa
         if row := self.session.execute(stmt).first():
             species = _update(row[0], values)
         else:
@@ -418,7 +418,7 @@ class APILoader:
             "name": name,
         }
 
-        stmt = select(Observer).where(Observer.name == name)
+        stmt = select(Observer).where(Observer.name == name)  # noqa
         if row := self.session.execute(stmt).first():
             observer = _update(row[0], values)
         else:
@@ -663,7 +663,7 @@ class MyDataLoader:
 
         values = {"modified": timestamp, "identifier": "", "name": name}
 
-        stmt = select(Observer).where(Observer.name == name)
+        stmt = select(Observer).where(Observer.name == name)  # noqa
         if row := self.session.execute(stmt).first():
             observer = _update(row[0], values)
         else:
@@ -693,7 +693,7 @@ class MyDataLoader:
             "exotic_code": "",
         }
 
-        stmt = select(Species).where(Species.order == order)
+        stmt = select(Species).where(Species.order == order)  # noqa
         if row := self.session.execute(stmt).first():
             species = _update(row[0], values)
         else:
