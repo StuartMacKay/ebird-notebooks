@@ -1,8 +1,10 @@
 import csv
 import datetime as dt
 import decimal
+import json
 import re
 import sys
+import traceback
 from pathlib import Path
 from typing import Any, Optional, TypeVar
 from urllib.error import HTTPError, URLError
@@ -546,11 +548,14 @@ class APILoader:
         for observation_data in checklist_data["obs"]:
             try:
                 self._get_observation(observation_data, checklist)
-            except Exception as err:
-                sys.stdout.write(
-                    f"Observation not added: {identifier}, {checklist_data["obsId"]}"
-                )
-                sys.stdout.write(f"{err}\n")
+            except Exception as err:  # noqa
+                sys.stdout.write("----\n")
+                sys.stdout.write("Observation not added...\n")
+                sys.stdout.write("\n")
+                sys.stdout.write(traceback.format_exc())
+                sys.stdout.write("\n")
+                sys.stdout.write(json.dumps(observation_data))
+                sys.stdout.write("\n\n")
                 sys.stdout.flush()
 
         return checklist
