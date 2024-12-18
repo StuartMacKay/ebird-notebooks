@@ -163,10 +163,11 @@ class Observations:
 
     def latest(self):
         statement = (
-            select(Observation, Checklist, Location, Observer)
-            .join(Checklist.identifier)
-            .join(Location.identifier)
-            .join(Observer.identifier)
+            select(Observation, Species, Checklist, Location, Observer)
+            .join(Observation.species)
+            .join(Observation.checklist)
+            .join(Observation.location)
+            .join(Observation.observer)
             .order_by(Checklist.date.desc(), Checklist.time.desc())
         )
         return self.session.execute(statement).first()
