@@ -336,20 +336,38 @@ class APILoader:
     def _get_observation_global_identifier(row: dict[str, str]) -> str:
         return f"URN:CornellLabOfOrnithology:{row['projId']}:{row['obsId']}"
 
-    def _fetch_visits(self, region: str, date: dt.date) -> dict:
+    def _fetch_visits(
+        self,
+        region: str,
+        date: Optional[dt.date] = None,
+        max_results: int = 200,
+    ) -> dict:
         visits: dict
 
-        sys.stdout.write(f"Fetching visits: {region}, {date}\n")
+        sys.stdout.write("Fetching visits...\n")
+        sys.stdout.write(f"Region: {region}\n")
+
+        if date:
+            sys.stdout.write(f"Date: {date}\n")
+
+        if max_results == 200:
+            sys.stdout.write(f"No. of checklists: {max_results} (Maximum allowed)\n")
+        else:
+            sys.stdout.write(f"No. of checklists: {max_results}\n")
+
         sys.stdout.flush()
 
         try:
-            visits = get_visits(self.api_key, region, date=date, max_results=200)
+            visits = get_visits(
+                self.api_key, region, date=date, max_results=max_results
+            )
             sys.stdout.write("Visits made: %d\n" % len(visits))
             sys.stdout.flush()
         except (URLError, HTTPError) as err:
             visits = dict()
-            sys.stdout.write(f"Visits not fetched: {region}, {date}\n")
-            sys.stdout.write(f"{err}\n")
+            sys.stdout.write("Error: visits not fetched...\n")
+            sys.stdout.write(err)
+            sys.stdout.write("\n")
             sys.stdout.flush()
 
         return visits
@@ -550,7 +568,12 @@ class APILoader:
 
         return checklist
 
-    def load(self, region: str, date: dt.date) -> None:
+    def load(
+        self,
+        region: str,
+        date: Optional[dt.date] = None,
+        max_results: int = 200,
+    ) -> None:
         added: int = 0
         updated: int = 0
         unchanged: int = 0
