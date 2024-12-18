@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 This project adheres to [PEP440](https://www.python.org/dev/peps/pep-0440/)
 and by implication, [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+- Updated environment variables so connections can be made to a database server.
+- Updated notebooks for working with checklists and observations to display data in HTML tables.
+
 ## [0.0.3] - 2024-12-16
 - Renamed 'working with the database' notebook to 'working with checklists'.
 - Added a helper class, ObservationQuery for fetching Observations.
