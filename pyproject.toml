@@ -12,6 +12,7 @@ dependencies = [
     "django>=5.1.4",
     "ebird-api>=3.0.7",
     "ebird-checklists>=0.1.0",
+    "ipython>=8.31.0",
     "jupyterlab>=4.2.5",
     "notebook>=7.2.2",
     "python-dotenv>=1.0.1",
