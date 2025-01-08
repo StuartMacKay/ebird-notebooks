@@ -5,7 +5,6 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 """
 import os
 import socket
-import sys
 
 from django.core.exceptions import ImproperlyConfigured
 
