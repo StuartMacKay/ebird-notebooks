@@ -11,7 +11,7 @@ dependencies = [
     "django-extensions>=3.2.3",
     "django>=5.1.4",
     "ebird-api>=3.0.7",
-    "ebird-checklists>=0.1.0",
+    "ebird-checklists>=0.3.0",
     "ipython>=8.31.0",
     "jupyterlab>=4.2.5",
     "notebook>=7.2.2",
@@ -62,7 +62,7 @@ message = "New version: {current_version} → {new_version}"
 commit_args = ""
 
 [[tool.bumpversion.files]]
-filename = "config/__init__.py"
+filename = "server/__init__.py"
 search = '__version__ = "{current_version}"'
 replace = '__version__ = "{new_version}"'
 
