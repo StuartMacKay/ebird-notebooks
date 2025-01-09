@@ -433,16 +433,16 @@ wheels = [
 
 [[package]]
 name = "ebird-checklists"
-version = "0.3.0"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "ebird-api" },
     { name = "python-dateutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/a7/66ee9296c90c27d4f5302f403afb49bf4c324de0a5edf468e0154661dd79/ebird_checklists-0.3.0.tar.gz", hash = "sha256:61dec834e03690813e287111b954c5e0c9eddd63495b86e1b93fd4ea8da33b47", size = 21374 }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/59/819250d1aa39ff03031dec57e18573ab1b717f77d3c6b327545503480f11/ebird_checklists-0.3.1.tar.gz", hash = "sha256:4473265b181ef464ec6ab0eaf2629a1e67322615b37c5772a32e79793474a47b", size = 21396 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/d7/20c512acdf66835fc1687f07ed4f9cc1fc3232a90f22f9db7905fface525/ebird_checklists-0.3.0-py3-none-any.whl", hash = "sha256:f29278ea54e2d5650b99a7515bdcf89daf3cdf67e1800901eb9d8e8b3872a366", size = 26422 },
+    { url = "https://files.pythonhosted.org/packages/24/d4/670de2864e020ba9e25dcca73e59a81cd1fec9e168f5b16b1cc92df484f8/ebird_checklists-0.3.1-py3-none-any.whl", hash = "sha256:e7703ce10d937fb3545e22830c91d6e663841a850a639e86b17e5661da3822b3", size = 26425 },
 ]
 
 [[package]]
@@ -484,7 +484,7 @@ requires-dist = [
     { name = "django-environ", specifier = ">=0.11.2" },
     { name = "django-extensions", specifier = ">=3.2.3" },
     { name = "ebird-api", specifier = ">=3.0.7" },
-    { name = "ebird-checklists", specifier = ">=0.3.0" },
+    { name = "ebird-checklists", specifier = ">=0.3.1" },
     { name = "ipython", specifier = ">=8.31.0" },
     { name = "jupyterlab", specifier = ">=4.2.5" },
     { name = "notebook", specifier = ">=7.2.2" },
