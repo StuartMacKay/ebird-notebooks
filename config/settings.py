@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_extensions",
     "debug_toolbar",
-    "ebird.checklists",
+    "checklists",
 ]
 
 MIDDLEWARE = [
@@ -208,4 +208,5 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 #   eBird
 # #########
 
-EBIRD_API_KEY = env.str("EBIRD_API_KEY", default="")
+EBIRD_API_KEY = env.str("EBIRD_API_KEY")
+EBIRD_API_LOCALE = env.str("EBIRD_API_LOCALE")
