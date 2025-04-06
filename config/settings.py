@@ -65,9 +65,9 @@ MIDDLEWARE = [
 #   WEB SERVER
 # ##############
 
-ROOT_URLCONF = "server.urls"
+ROOT_URLCONF = "config.urls"
 
-WSGI_APPLICATION = "server.wsgi.application"
+WSGI_APPLICATION = "config.wsgi.application"
 
 if DEBUG:
     # From cookiecutter-django: We need to configure an IP address to
