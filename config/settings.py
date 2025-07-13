@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_extensions",
-    "checklists",
+    "ebird.api.data",
 ]
 
 MIDDLEWARE = [
@@ -122,6 +122,11 @@ TEMPLATES = [
 # ########################
 
 LANGUAGE_CODE = "en"
+
+LANGUAGES = [
+    ('en', "English"),
+]
+
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
@@ -208,4 +213,4 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 # #########
 
 EBIRD_API_KEY = env.str("EBIRD_API_KEY")
-EBIRD_API_LOCALE = env.str("EBIRD_API_LOCALE")
+EBIRD_API_LOCALES = env.str("EBIRD_API_LOCALES")
