@@ -1,0 +1,14 @@
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for location in locations %}
+      <tr>
+        <td style="text-align: left">{{ location.original }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
