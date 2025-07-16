@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial release integrating Django and Jupyter Lab, with database models and
 loaders for loading data from eBird.
 
-- Added a notebook, notebook_basics, on how to load data into the database and
-  worth with the Django models.
-- Added a notebook, location_basics, showing basic statistics on locations - longest
-  and shortest location names, distribution of name lengths and a breakdown by
-  type (hotspots vs private), and protocol (stationary, travelling, etc.).
+- Added a notebook, getting-started, on how to load data into the database and
+  work with the Django models.
+
+- Added a set of notebooks for locations, looking at the length of location names,
+  whether names can be shortened by removing coordinates, and looking at the 
+  breakdown of locations by the protocol followed.
