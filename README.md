@@ -51,7 +51,8 @@ Start Jupyter Lab:
 python manage.py shell_plus --notebook
 ```
 
-Finally, open up the "Notebook basics" notebook and run all cells.
+Finally, open up the [Getting Started](notebooks/getting-started.ipynb) notebook 
+and run all cells.
 
 ## Django Admin
 
@@ -70,14 +71,22 @@ Now run the django server:
 python manage.py runserver
 ```
 
-Open a new tab on your browser and visit http://localhost:8000/admin/
+Open a new tab on your browser, visit http://localhost:8000/admin/, log in
+using the newly created superuser account. When you run the cells in the 
+Getting Started notebook you can then browse the data loaded into the tables.
 
 ## Project Information
 
-* Issues: https://github.com/StuartMacKay/ebird-notebooks/issues
+* Issues: https://todo.sr.ht/~smackay/ebird-notebooks
+* Repository: https://git.sr.ht/~smackay/ebird-notebooks
+* Announcements: https://lists.sr.ht/~smackay/ebirders-announce
+* Discussions: https://lists.sr.ht/~smackay/ebirders-discuss
+* Development: https://lists.sr.ht/~smackay/ebirders-develop
+
+The repository is also mirrored on Github:
+
 * Repository: https://github.com/StuartMacKay/ebird-notebooks
 
-The app is tested on Python 3.12, and Django 5.1.
+# License
 
-The project is made available under the terms of the
-[MIT](https://opensource.org/licenses/MIT) license.
+The project is made available under the terms of the [MIT](https://opensource.org/licenses/MIT) license.
