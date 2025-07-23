@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Latest
 
 - Added the 'ebird-api-basics' folder for notebooks that work with the eBird API.
+- Added 'available-locales' notebook for listing the languages supported by eBird.
 - Moved the 'getting-started' notebook into the 'ebird-api-basics' folder.
 
 ## 0.1.0 - 2025-07-16
