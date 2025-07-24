@@ -212,4 +212,4 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 # #########
 
 EBIRD_API_KEY = env.str("EBIRD_API_KEY")
-EBIRD_API_LOCALES = env.str("EBIRD_API_LOCALES")
+EBIRD_LOCALES = env.json("EBIRD_LOCALES", '{"%s":"%s"}' % (LANGUAGE_CODE, LANGUAGE_CODE))
