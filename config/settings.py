@@ -57,7 +57,6 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 # ##############
