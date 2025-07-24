@@ -84,7 +84,7 @@ if DEBUG:
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
-DB_NAME = env.str("DB_NAME", default="checklists")
+DB_NAME = env.str("DB_NAME", default="notebooks")
 
 DATABASES = {
     "default": env.db_url(default=f"sqlite:///{DATABASE_DIR}/{DB_NAME}.sqlite3")
