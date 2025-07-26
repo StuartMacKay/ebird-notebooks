@@ -9,7 +9,6 @@ dependencies = [
     "django-environ>=0.11.2",
     "django-extensions>=3.2.3",
     "django>=5.1.4",
-    "ebird-codes>=0.0.2",
     "ipython>=8.31.0",
     "jupyterlab>=4.2.5",
     "notebook>=7.2.2",
